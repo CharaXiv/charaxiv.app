@@ -47,6 +47,17 @@ func main() {
 		return templates.CharacterSheet(ctx)
 	}))
 
+	// Preview mode toggle
+	r.Post("/api/preview/on", HTML(func(r *http.Request) templ.Component {
+		ctx := templates.PageContext{IsOwner: false}
+		return templates.CharacterSheet(ctx)
+	}))
+
+	r.Post("/api/preview/off", HTML(func(r *http.Request) templ.Component {
+		ctx := templates.PageContext{IsOwner: true}
+		return templates.CharacterSheet(ctx)
+	}))
+
 	port := "8000"
 	if p := os.Getenv("PORT"); p != "" {
 		port = p

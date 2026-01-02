@@ -3,7 +3,7 @@ package templates
 var sheetStyles = templ.NewOnceHandle()
 
 templ CharacterSheet(pc PageContext) {
-	@Layout("Character") {
+	@Layout("Character", pc) {
 		@sheetStyles.Once() {
 			<style>
 				.sheet {

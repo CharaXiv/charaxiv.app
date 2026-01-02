@@ -8,7 +8,7 @@ func isDev() bool {
 
 var layoutStyles = templ.NewOnceHandle()
 
-templ Layout(title string) {
+templ Layout(title string, pc PageContext) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -29,10 +29,12 @@ templ Layout(title string) {
 					}
 				</style>
 			}
-			@Header()
-			<main class="main">
-				{ children... }
-			</main>
+			<div id="app">
+				@Header(pc)
+				<main class="main">
+					{ children... }
+				</main>
+			</div>
 			if isDev() {
 				@liveReloadScript()
 			}

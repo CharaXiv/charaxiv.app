@@ -2,7 +2,7 @@ package templates
 
 var headerStyles = templ.NewOnceHandle()
 
-templ Header() {
+templ Header(pc PageContext) {
 	@headerStyles.Once() {
 		<style>
 			.header {
@@ -68,15 +68,48 @@ templ Header() {
 			@LogoCharaXiv()
 		</a>
 		<div class="header-actions">
-			@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "Import to account"}) {
-				@IconPaperPlane()
-			}
-			@ButtonLink(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
-				@IconAddressBook()
-			}
-			@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{"title": "Share options"}) {
-				@IconArrowUpFromBracket()
+			@PreviewToggle(pc)
+			if pc.IsOwner {
+				@ButtonLink(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
+					@IconAddressBook()
+				}
+				@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{"title": "Share options"}) {
+					@IconArrowUpFromBracket()
+				}
+			} else {
+				@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "Import to account"}) {
+					@IconPaperPlane()
+				}
 			}
 		</div>
 	</header>
+}
+
+// PreviewToggle renders the preview mode toggle button
+// When in owner mode (IsOwner=true), clicking switches to preview mode
+// When in preview mode (IsOwner=false), clicking switches back to owner mode
+templ PreviewToggle(pc PageContext) {
+	if pc.IsOwner {
+		@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{
+			"id":        "preview-toggle",
+			"title":     "Preview as visitor",
+			"hx-post":   "/api/preview/on",
+			"hx-target": "#app",
+			"hx-select": "#app",
+			"hx-swap":   "outerHTML",
+		}) {
+			@IconEye()
+		}
+	} else {
+		@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{
+			"id":        "preview-toggle",
+			"title":     "Exit preview mode",
+			"hx-post":   "/api/preview/off",
+			"hx-target": "#app",
+			"hx-select": "#app",
+			"hx-swap":   "outerHTML",
+		}) {
+			@IconEye()
+		}
+	}
 }
