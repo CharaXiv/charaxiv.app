@@ -16,8 +16,9 @@ templ Header() {
 				align-items: center;
 				justify-content: space-between;
 				padding: 0 var(--space-2);
-				background: var(--white);
-				box-shadow: var(--shadow-sm);
+				background: rgba(249, 250, 251, 0.8);
+				backdrop-filter: blur(12px);
+				-webkit-backdrop-filter: blur(12px);
 			}
 
 			.header-logo {
@@ -26,13 +27,14 @@ templ Header() {
 				align-items: center;
 				gap: var(--space-2);
 				text-decoration: none;
-				color: var(--blue-600);
+				color: var(--slate-800);
 				font-size: var(--font-size-2xl);
 				font-weight: var(--font-weight-medium);
+				line-height: 1;
 			}
 
 			.header-logo:hover {
-				color: var(--blue-700);
+				color: var(--slate-900);
 			}
 
 			.header-logo .icon {
@@ -63,7 +65,7 @@ templ Header() {
 				justify-content: center;
 				width: 32px;
 				height: 32px;
-				border-radius: var(--radius-md);
+				border-radius: var(--radius-default);
 				border: none;
 				cursor: pointer;
 				transition: var(--transition-fast);
@@ -80,33 +82,34 @@ templ Header() {
 				color: var(--slate-400);
 			}
 
-			.header-btn-ghost:hover {
+			.header-btn-ghost:hover:not(:disabled) {
 				background: var(--slate-100);
 				color: var(--slate-600);
 			}
 
 			.header-btn-ghost:disabled {
-				color: var(--slate-300);
+				color: var(--slate-400);
 				cursor: not-allowed;
+				opacity: 0.5;
 			}
 
 			.header-btn-ghost-blue {
 				background: transparent;
-				color: var(--blue-600);
+				color: var(--blue-500);
 			}
 
 			.header-btn-ghost-blue:hover {
 				background: var(--blue-50);
-				color: var(--blue-700);
+				color: var(--blue-600);
 			}
 
 			.header-btn-solid-blue {
-				background: var(--blue-600);
-				color: var(--white);
+				background: var(--blue-500);
+				color: var(--gray-50);
 			}
 
 			.header-btn-solid-blue:hover {
-				background: var(--blue-700);
+				background: var(--blue-600);
 			}
 		</style>
 	}
