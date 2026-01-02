@@ -134,7 +134,7 @@ templ buttonStylesOnce() {
 	}
 }
 
-func buttonClass(variant ButtonVariant, size ButtonSize) string {
+func buttonClass(variant ButtonVariant, size ButtonSize, extraClass string) string {
 	class := "btn"
 	switch variant {
 	case ButtonGhost:
@@ -151,13 +151,25 @@ func buttonClass(variant ButtonVariant, size ButtonSize) string {
 	if size == ButtonSizeIcon {
 		class += " btn-icon"
 	}
+	if extraClass != "" {
+		class += " " + extraClass
+	}
 	return class
+}
+
+// extractClass removes and returns the "class" key from attrs
+func extractClass(attrs templ.Attributes) string {
+	if class, ok := attrs["class"].(string); ok {
+		delete(attrs, "class")
+		return class
+	}
+	return ""
 }
 
 // Button renders a <button> element
 templ Button(variant ButtonVariant, size ButtonSize, attrs templ.Attributes) {
 	@buttonStylesOnce()
-	<button class={ buttonClass(variant, size) } { attrs... }>
+	<button class={ buttonClass(variant, size, extractClass(attrs)) } { attrs... }>
 		{ children... }
 	</button>
 }
@@ -165,7 +177,7 @@ templ Button(variant ButtonVariant, size ButtonSize, attrs templ.Attributes) {
 // ButtonLink renders an <a> element styled as a button
 templ ButtonLink(variant ButtonVariant, size ButtonSize, attrs templ.Attributes) {
 	@buttonStylesOnce()
-	<a class={ buttonClass(variant, size) } { attrs... }>
+	<a class={ buttonClass(variant, size, extractClass(attrs)) } { attrs... }>
 		{ children... }
 	</a>
 }
