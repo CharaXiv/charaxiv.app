@@ -21,3 +21,13 @@ tmp_templ/
 .vscode/
 *.swp
 *.swo
+.env
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfvars
+terraform/.terraform.lock.hcl
+*.conf
+gcs-credentials.json
