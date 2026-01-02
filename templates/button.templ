@@ -1,0 +1,171 @@
+package templates
+
+type ButtonVariant string
+
+const (
+	ButtonGhost      ButtonVariant = "ghost"
+	ButtonGhostBlue  ButtonVariant = "ghost-blue"
+	ButtonGhostGreen ButtonVariant = "ghost-green"
+	ButtonSolidPlain ButtonVariant = "solid-plain"
+	ButtonSolidBlue  ButtonVariant = "solid-blue"
+)
+
+type ButtonSize string
+
+const (
+	ButtonSizeDefault ButtonSize = ""
+	ButtonSizeIcon    ButtonSize = "icon"
+)
+
+var buttonStyles = templ.NewOnceHandle()
+
+templ buttonStylesOnce() {
+	@buttonStyles.Once() {
+		<style>
+			.btn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				gap: var(--space-2);
+				padding: var(--space-2) var(--space-3);
+				border-radius: var(--radius-default);
+				border: none;
+				cursor: pointer;
+				transition: var(--transition-fast);
+				font-size: var(--font-size-sm);
+				font-weight: var(--font-weight-medium);
+				line-height: 1;
+				text-decoration: none;
+			}
+
+			.btn .icon {
+				width: 16px;
+				height: 16px;
+			}
+
+			.btn-icon {
+				width: 32px;
+				height: 32px;
+				padding: 0;
+			}
+
+			.btn-ghost {
+				background: transparent;
+				color: var(--slate-400);
+				border: 1px solid var(--slate-400);
+			}
+
+			.btn-ghost:hover:not(:disabled) {
+				background: var(--slate-100);
+				color: var(--slate-600);
+				border-color: var(--slate-600);
+			}
+
+			.btn-ghost:disabled {
+				cursor: not-allowed;
+				opacity: 0.5;
+			}
+
+			.btn-ghost-blue {
+				background: transparent;
+				color: var(--blue-500);
+				border: 1px solid var(--blue-500);
+			}
+
+			.btn-ghost-blue:hover:not(:disabled) {
+				background: var(--blue-50);
+				color: var(--blue-600);
+				border-color: var(--blue-600);
+			}
+
+			.btn-ghost-blue:disabled {
+				cursor: not-allowed;
+				opacity: 0.5;
+			}
+
+			.btn-solid-blue {
+				background: var(--blue-500);
+				color: var(--gray-50);
+				border: 1px solid var(--blue-500);
+			}
+
+			.btn-solid-blue:hover:not(:disabled) {
+				background: var(--blue-600);
+				border-color: var(--blue-600);
+			}
+
+			.btn-solid-blue:disabled {
+				cursor: not-allowed;
+				opacity: 0.5;
+			}
+
+			.btn-ghost-green {
+				background: transparent;
+				color: var(--green-500);
+				border: 1px solid var(--green-500);
+			}
+
+			.btn-ghost-green:hover:not(:disabled) {
+				background: var(--green-50);
+				color: var(--green-600);
+				border-color: var(--green-600);
+			}
+
+			.btn-ghost-green:disabled {
+				cursor: not-allowed;
+				opacity: 0.5;
+			}
+
+			.btn-solid-plain {
+				background: var(--slate-200);
+				color: var(--slate-700);
+				border: none;
+			}
+
+			.btn-solid-plain:hover:not(:disabled) {
+				background: var(--slate-300);
+			}
+
+			.btn-solid-plain:disabled {
+				cursor: not-allowed;
+				opacity: 0.5;
+			}
+		</style>
+	}
+}
+
+func buttonClass(variant ButtonVariant, size ButtonSize) string {
+	class := "btn"
+	switch variant {
+	case ButtonGhost:
+		class += " btn-ghost"
+	case ButtonGhostBlue:
+		class += " btn-ghost-blue"
+	case ButtonSolidBlue:
+		class += " btn-solid-blue"
+	case ButtonGhostGreen:
+		class += " btn-ghost-green"
+	case ButtonSolidPlain:
+		class += " btn-solid-plain"
+	}
+	if size == ButtonSizeIcon {
+		class += " btn-icon"
+	}
+	return class
+}
+
+// Button renders a <button> element
+templ Button(variant ButtonVariant, size ButtonSize, attrs templ.Attributes) {
+	@buttonStylesOnce()
+	<button class={ buttonClass(variant, size) } { attrs... }>
+		{ children... }
+	</button>
+}
+
+// ButtonLink renders an <a> element styled as a button
+templ ButtonLink(variant ButtonVariant, size ButtonSize, attrs templ.Attributes) {
+	@buttonStylesOnce()
+	<a class={ buttonClass(variant, size) } { attrs... }>
+		{ children... }
+	</a>
+}

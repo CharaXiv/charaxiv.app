@@ -77,23 +77,12 @@ templ CharacterSheet() {
 					font-weight: var(--font-weight-semibold);
 				}
 
-				/* Temporary colors for visualization */
-				.sheet-left .panel {
-					background: var(--blue-100);
-				}
 
-				.sheet-right .panel {
-					background: var(--amber-100);
-				}
 			</style>
 		}
 		<div class="sheet">
 			<div class="sheet-left">
-				<div class="panel">
-					<h2>Left Panel</h2>
-					<p>This is the left column content.</p>
-					<p>It contains character images, name, and memos.</p>
-				</div>
+				@Profile()
 			</div>
 			<div class="sheet-right">
 				<div class="panel">

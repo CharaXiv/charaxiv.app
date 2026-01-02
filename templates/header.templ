@@ -42,12 +42,14 @@ templ Header() {
 				height: 24px;
 			}
 
-			.header-logo-text {
+			.header-logo .logo-text {
 				display: none;
+				height: 20px;
+				width: auto;
 			}
 
 			@media (min-width: 640px) {
-				.header-logo-text {
+				.header-logo .logo-text {
 					display: inline;
 				}
 			}
@@ -58,81 +60,23 @@ templ Header() {
 				align-items: center;
 				gap: var(--space-2);
 			}
-
-			.header-btn {
-				display: inline-flex;
-				align-items: center;
-				justify-content: center;
-				width: 32px;
-				height: 32px;
-				border-radius: var(--radius-default);
-				border: none;
-				cursor: pointer;
-				transition: var(--transition-fast);
-				font-size: var(--font-size-base);
-			}
-
-			.header-btn .icon {
-				width: 16px;
-				height: 16px;
-			}
-
-			.header-btn-ghost {
-				background: transparent;
-				color: var(--slate-400);
-				border: 1px solid var(--slate-400);
-			}
-
-			.header-btn-ghost:hover:not(:disabled) {
-				background: var(--slate-100);
-				color: var(--slate-600);
-				border-color: var(--slate-600);
-			}
-
-			.header-btn-ghost:disabled {
-				color: var(--slate-400);
-				border-color: var(--slate-400);
-				cursor: not-allowed;
-				opacity: 0.5;
-			}
-
-			.header-btn-ghost-blue {
-				background: transparent;
-				color: var(--blue-500);
-				border: 1px solid var(--blue-500);
-			}
-
-			.header-btn-ghost-blue:hover {
-				background: var(--blue-50);
-				color: var(--blue-600);
-				border-color: var(--blue-600);
-			}
-
-			.header-btn-solid-blue {
-				background: var(--blue-500);
-				color: var(--gray-50);
-			}
-
-			.header-btn-solid-blue:hover {
-				background: var(--blue-600);
-			}
 		</style>
 	}
 	<header class="header">
 		<a href="/" class="header-logo">
 			@IconLayerGroup()
-			<span class="header-logo-text">CharaXiv</span>
+			@LogoCharaXiv()
 		</a>
 		<div class="header-actions">
-			<button class="header-btn header-btn-ghost" disabled title="Import to account">
+			@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "Import to account"}) {
 				@IconPaperPlane()
-			</button>
-			<a href="/characters" class="header-btn header-btn-ghost-blue" title="Character page">
+			}
+			@ButtonLink(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
 				@IconAddressBook()
-			</a>
-			<button class="header-btn header-btn-solid-blue" title="Share options">
+			}
+			@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{"title": "Share options"}) {
 				@IconArrowUpFromBracket()
-			</button>
+			}
 		</div>
 	</header>
 }
