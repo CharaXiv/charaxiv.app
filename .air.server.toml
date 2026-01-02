@@ -1,0 +1,16 @@
+[build]
+cmd = "go build -o bin/server ."
+bin = "./bin/server"
+args_bin = []
+include_ext = ["go"]
+exclude_dir = ["bin", "tmp", "cmd"]
+kill_delay = "500ms"
+delay = 500
+rerun_delay = 500
+send_interrupt = true
+
+[env]
+DEV = "1"
+
+[misc]
+clean_on_exit = true

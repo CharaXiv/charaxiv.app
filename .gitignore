@@ -1,0 +1,23 @@
+# Binaries
+bin/
+charaxiv
+*.exe
+
+# Database
+*.db
+
+# Air temp directories
+tmp/
+tmp_templ/
+
+# Generated templ files
+*_templ.go
+
+# Nginx temp files
+/tmp/nginx_*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
