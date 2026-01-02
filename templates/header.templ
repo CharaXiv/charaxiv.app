@@ -7,6 +7,16 @@ var headerStyles = templ.NewOnceHandle()
 templ Header() {
 	@headerStyles.Once() {
 		<style>
+			.header-backdrop {
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				height: 48px;
+				background: white;
+				z-index: 49;
+			}
+
 			.header {
 				position: sticky;
 				top: 0;
@@ -64,6 +74,7 @@ templ Header() {
 			}
 		</style>
 	}
+	<div class="header-backdrop"></div>
 	<header class="header">
 		<a href="/" class="header-logo">
 			@IconLayerGroup()
