@@ -2,7 +2,7 @@ package templates
 
 var profileStyles = templ.NewOnceHandle()
 
-templ Profile() {
+templ Profile(pc PageContext) {
 	@profileStyles.Once() {
 		<style>
 			.profile {
@@ -142,17 +142,17 @@ templ Profile() {
 	}
 	<section class="profile" aria-label="character-profile">
 		<div class="profile-top">
-			@ImageGallery()
+			@ImageGallery(pc)
 			<div class="name-section">
-				<input type="text" class="name-input" placeholder="名前" value=""/>
-				<input type="text" class="ruby-input" placeholder="よみがな" value=""/>
+				<input type="text" class="name-input" placeholder="名前" value="" readonly?={ !pc.IsOwner }/>
+				<input type="text" class="ruby-input" placeholder="よみがな" value="" readonly?={ !pc.IsOwner }/>
 			</div>
 		</div>
-		@MemoGroup()
+		@MemoGroup(pc)
 	</section>
 }
 
-templ ImageGallery() {
+templ ImageGallery(pc PageContext) {
 	<div class="image-gallery">
 		<div class="image-display">
 			<div class="image-placeholder">
@@ -176,7 +176,7 @@ templ ImageGallery() {
 	</div>
 }
 
-templ MemoGroup() {
+templ MemoGroup(pc PageContext) {
 	<div class="memo-group">
 		<div class="memo-section">
 			<div class="memo-header">

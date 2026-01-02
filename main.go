@@ -43,7 +43,8 @@ func main() {
 
 	// Character sheet
 	r.Get("/", HTML(func(r *http.Request) templ.Component {
-		return templates.CharacterSheet()
+		ctx := templates.NewPageContext()
+		return templates.CharacterSheet(ctx)
 	}))
 
 	port := "8000"

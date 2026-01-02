@@ -2,7 +2,7 @@ package templates
 
 var sheetStyles = templ.NewOnceHandle()
 
-templ CharacterSheet() {
+templ CharacterSheet(pc PageContext) {
 	@Layout("Character") {
 		@sheetStyles.Once() {
 			<style>
@@ -82,7 +82,7 @@ templ CharacterSheet() {
 		}
 		<div class="sheet">
 			<div class="sheet-left">
-				@Profile()
+				@Profile(pc)
 			</div>
 			<div class="sheet-right">
 				<div class="panel">
