@@ -83,10 +83,8 @@ func proxyWebSocket(w http.ResponseWriter, r *http.Request, targetHost string) {
 }
 
 func main() {
-	// Trigger live reload when server starts (dev mode)
-	if os.Getenv("DEV") == "1" {
-		go http.Get("http://localhost:8001/reload")
-	}
+	// Dev mode: notify reloader when server is ready (after ListenAndServe starts)
+	devMode := os.Getenv("DEV") == "1"
 
 	// Initialize storage
 	var store storage.Storage
@@ -215,5 +213,17 @@ func main() {
 	}
 
 	log.Printf("Starting server on :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
+
+	if devMode {
+		// Use a listener so we can notify reloader after actually listening
+		ln, err := net.Listen("tcp", ":"+port)
+		if err != nil {
+			log.Fatal(err)
+		}
+		// Notify reloader now that we're listening
+		go http.Get("http://localhost:8001/reload")
+		log.Fatal(http.Serve(ln, r))
+	} else {
+		log.Fatal(http.ListenAndServe(":"+port, r))
+	}
 }
