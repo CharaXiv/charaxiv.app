@@ -3,9 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -24,6 +28,58 @@ func HTML(c func(r *http.Request) templ.Component) http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		c(r).Render(r.Context(), w)
 	}
+}
+
+// proxyWebSocket proxies a WebSocket connection to the target host.
+func proxyWebSocket(w http.ResponseWriter, r *http.Request, targetHost string) {
+	// Hijack the connection
+	hj, ok := w.(http.Hijacker)
+	if !ok {
+		http.Error(w, "WebSocket hijack not supported", http.StatusInternalServerError)
+		return
+	}
+
+	clientConn, _, err := hj.Hijack()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer clientConn.Close()
+
+	// Connect to target
+	targetConn, err := net.Dial("tcp", targetHost)
+	if err != nil {
+		return
+	}
+	defer targetConn.Close()
+
+	// Forward the original request with path stripped
+	path := strings.TrimPrefix(r.URL.Path, "/dev")
+	if path == "" {
+		path = "/"
+	}
+
+	// Write the HTTP upgrade request to target
+	fmt.Fprintf(targetConn, "%s %s HTTP/1.1\r\n", r.Method, path)
+	fmt.Fprintf(targetConn, "Host: %s\r\n", targetHost)
+	for key, values := range r.Header {
+		for _, value := range values {
+			fmt.Fprintf(targetConn, "%s: %s\r\n", key, value)
+		}
+	}
+	fmt.Fprintf(targetConn, "\r\n")
+
+	// Bidirectional copy
+	done := make(chan struct{})
+	go func() {
+		io.Copy(targetConn, clientConn)
+		done <- struct{}{}
+	}()
+	go func() {
+		io.Copy(clientConn, targetConn)
+		done <- struct{}{}
+	}()
+	<-done
 }
 
 func main() {
@@ -66,6 +122,36 @@ func main() {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+
+	// Dev mode: proxy to reloader (including WebSocket)
+	if os.Getenv("DEV") == "1" {
+		reloaderURL, _ := url.Parse("http://localhost:8001")
+		reloaderProxy := httputil.NewSingleHostReverseProxy(reloaderURL)
+
+		// Custom director to strip /dev prefix
+		originalDirector := reloaderProxy.Director
+		reloaderProxy.Director = func(req *http.Request) {
+			originalDirector(req)
+			req.URL.Path = strings.TrimPrefix(req.URL.Path, "/dev")
+			if req.URL.Path == "" {
+				req.URL.Path = "/"
+			}
+		}
+
+		// Handle WebSocket upgrade by copying headers
+		reloaderProxy.ModifyResponse = func(resp *http.Response) error {
+			return nil
+		}
+
+		r.HandleFunc("/dev/*", func(w http.ResponseWriter, r *http.Request) {
+			// For WebSocket, we need to handle upgrade
+			if r.Header.Get("Upgrade") == "websocket" {
+				proxyWebSocket(w, r, "localhost:8001")
+				return
+			}
+			reloaderProxy.ServeHTTP(w, r)
+		})
+	}
 
 	// Character sheet
 	r.Get("/", HTML(func(r *http.Request) templ.Component {
