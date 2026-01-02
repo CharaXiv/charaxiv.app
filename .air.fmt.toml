@@ -1,0 +1,7 @@
+[build]
+cmd = "gofmt -w . && /home/exedev/go/bin/templ fmt ."
+bin = "/usr/bin/true"
+include_ext = ["go", "templ"]
+exclude_regex = ["_templ\\.go$"]
+exclude_dir = ["bin", "tmp", "tmp_templ", "tmp_fmt"]
+tmp_dir = "tmp_fmt"

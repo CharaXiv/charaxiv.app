@@ -15,12 +15,13 @@ func main() {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	// Command channel to track processes
-	cmds := make(chan *exec.Cmd, 3)
+	cmds := make(chan *exec.Cmd, 4)
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(4)
 
 	// Start processes
 	go reloader(&wg, sigCh)
+	go formatter(&wg, cmds)
 	go templ(&wg, cmds)
 	go server(&wg, cmds)
 

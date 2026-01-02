@@ -48,12 +48,19 @@ Access the app at: **https://charaxiv.exe.xyz:8080/**
 
 ### How Live Reload Works
 
-1. Edit a `.templ` file → air runs `templ generate`
-2. Generated `_templ.go` changes → air rebuilds and restarts server
-3. Server starts → triggers `/reload` endpoint
-4. Reloader waits for `/health` to return 200
-5. Reloader sends WebSocket message to all connected browsers
-6. Browsers automatically refresh
+1. Edit a `.go` or `.templ` file → air runs `gofmt` and `templ fmt`
+2. Edit a `.templ` file → air runs `templ generate`
+3. Generated `_templ.go` changes → air rebuilds and restarts server
+4. Server starts → triggers `/reload` endpoint
+5. Reloader waits for `/health` to return 200
+6. Reloader sends WebSocket message to all connected browsers
+7. Browsers automatically refresh
+
+### Auto-formatting
+
+Files are automatically formatted on save:
+- **Go files**: `gofmt -w`
+- **Templ files**: `templ fmt`
 
 ### Building for Production
 
