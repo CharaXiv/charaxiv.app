@@ -142,6 +142,42 @@ The character sheet uses a responsive two-column layout:
 | 1024px+ | 1fr / 648px, 16px gap, max 1104px | 1fr / 1fr |
 | 1536px+ | 440px / 968px, 16px gap, max 1536px | 1fr / 2fr |
 
+## Icons
+
+Icons are inline SVGs from Font Awesome, defined in `templates/icons.templ`. This avoids external dependencies and only ships icons you actually use.
+
+### Adding a New Icon
+
+1. Find the icon on [Font Awesome GitHub](https://github.com/FortAwesome/Font-Awesome/tree/6.x/svgs/solid)
+2. Get the raw SVG:
+   ```bash
+   curl -s "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.x/svgs/solid/ICON-NAME.svg"
+   ```
+3. Add to `templates/icons.templ`:
+   ```go
+   templ IconMyIcon() {
+       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 XXX 512" fill="currentColor" class="icon">
+           <path d="..."></path>
+       </svg>
+   }
+   ```
+4. Use in templates:
+   ```go
+   @IconMyIcon()
+   ```
+
+### Icon Styling
+
+- Icons use `currentColor`, so they inherit text color from parent
+- Default size is `1em` (relative to font-size)
+- Override size with custom class or inline style:
+  ```css
+  .my-large-icon .icon {
+      width: 24px;
+      height: 24px;
+  }
+  ```
+
 ## Gotchas
 
 ### Compression Middleware + templ
