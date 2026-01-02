@@ -5,11 +5,20 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
 	"charaxiv/templates"
 )
+
+// HTML wraps a templ.Component handler, setting the Content-Type header.
+func HTML(c func(r *http.Request) templ.Component) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		c(r).Render(r.Context(), w)
+	}
+}
 
 func main() {
 	// Trigger live reload when server starts (dev mode)
@@ -33,10 +42,9 @@ func main() {
 	})
 
 	// Character sheet
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		templates.CharacterSheet().Render(r.Context(), w)
-	})
+	r.Get("/", HTML(func(r *http.Request) templ.Component {
+		return templates.CharacterSheet()
+	}))
 
 	port := "8000"
 	if p := os.Getenv("PORT"); p != "" {
