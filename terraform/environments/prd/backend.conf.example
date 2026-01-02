@@ -1,0 +1,2 @@
+bucket = "charaxiv-app-tfstate"
+prefix = "charaxiv/prd"

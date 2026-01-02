@@ -1,0 +1,2 @@
+gcp_project_id = "charaxiv-app"
+gcp_region     = "us-west1"

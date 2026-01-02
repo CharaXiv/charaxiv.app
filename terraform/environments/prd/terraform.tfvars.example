@@ -1,0 +1,14 @@
+# Cloudflare
+cloudflare_account_id = "your_cloudflare_account_id"
+
+# GCP
+gcp_project_id = "your_gcp_project_id"
+gcp_region     = "asia-northeast1" # Tokyo
+
+# App image (optional, leave empty for initial setup)
+# app_image = "asia-northeast1-docker.pkg.dev/PROJECT/charaxiv-prd/app:latest"
+
+# Set sensitive values via environment variables:
+# export TF_VAR_cloudflare_api_token="..."
+# export TF_VAR_r2_access_key_id="..."
+# export TF_VAR_r2_secret_access_key="..."

@@ -1,0 +1,6 @@
+imports:
+  - path: bootstrap.jinja
+
+resources:
+  - name: tfstate
+    type: bootstrap.jinja

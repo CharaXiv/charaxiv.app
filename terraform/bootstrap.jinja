@@ -1,0 +1,20 @@
+resources:
+  - name: {{ env["project"] }}-tfstate
+    type: storage.v1.bucket
+    properties:
+      name: {{ env["project"] }}-tfstate
+      location: asia-northeast1
+      storageClass: STANDARD
+      versioning:
+        enabled: true
+      uniformBucketLevelAccess:
+        enabled: true
+      softDeletePolicy:
+        retentionDurationSeconds: 604800
+      lifecycle:
+        rule:
+          - action:
+              type: Delete
+            condition:
+              numNewerVersions: 10
+              isLive: false
