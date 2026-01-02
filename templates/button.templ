@@ -3,11 +3,14 @@ package templates
 type ButtonVariant string
 
 const (
-	ButtonGhost      ButtonVariant = "ghost"
-	ButtonGhostBlue  ButtonVariant = "ghost-blue"
-	ButtonGhostGreen ButtonVariant = "ghost-green"
-	ButtonSolidPlain ButtonVariant = "solid-plain"
-	ButtonSolidBlue  ButtonVariant = "solid-blue"
+	ButtonGhost       ButtonVariant = "ghost"
+	ButtonGhostBlue   ButtonVariant = "ghost-blue"
+	ButtonGhostGreen  ButtonVariant = "ghost-green"
+	ButtonGhostRed    ButtonVariant = "ghost-red"
+	ButtonGhostOrange ButtonVariant = "ghost-orange"
+	ButtonSolidPlain  ButtonVariant = "solid-plain"
+	ButtonSolidBlue   ButtonVariant = "solid-blue"
+	ButtonSolidOrange ButtonVariant = "solid-orange"
 )
 
 type ButtonSize string
@@ -130,6 +133,56 @@ templ buttonStylesOnce() {
 				cursor: not-allowed;
 				opacity: 0.5;
 			}
+
+			.btn-ghost-red {
+				background: transparent;
+				color: var(--red-500);
+				border: 1px solid var(--red-500);
+			}
+
+			.btn-ghost-red:hover:not(:disabled) {
+				background: var(--red-50);
+				color: var(--red-600);
+				border-color: var(--red-600);
+			}
+
+			.btn-ghost-red:disabled {
+				cursor: not-allowed;
+				opacity: 0.5;
+			}
+
+			.btn-ghost-orange {
+				background: transparent;
+				color: var(--orange-500);
+				border: 1px solid var(--orange-500);
+			}
+
+			.btn-ghost-orange:hover:not(:disabled) {
+				background: var(--orange-50);
+				color: var(--orange-600);
+				border-color: var(--orange-600);
+			}
+
+			.btn-ghost-orange:disabled {
+				cursor: not-allowed;
+				opacity: 0.5;
+			}
+
+			.btn-solid-orange {
+				background: var(--orange-500);
+				color: var(--gray-50);
+				border: 1px solid var(--orange-500);
+			}
+
+			.btn-solid-orange:hover:not(:disabled) {
+				background: var(--orange-600);
+				border-color: var(--orange-600);
+			}
+
+			.btn-solid-orange:disabled {
+				cursor: not-allowed;
+				opacity: 0.5;
+			}
 		</style>
 	}
 }
@@ -145,8 +198,14 @@ func buttonClass(variant ButtonVariant, size ButtonSize, extraClass string) stri
 		class += " btn-solid-blue"
 	case ButtonGhostGreen:
 		class += " btn-ghost-green"
+	case ButtonGhostRed:
+		class += " btn-ghost-red"
+	case ButtonGhostOrange:
+		class += " btn-ghost-orange"
 	case ButtonSolidPlain:
 		class += " btn-solid-plain"
+	case ButtonSolidOrange:
+		class += " btn-solid-orange"
 	}
 	if size == ButtonSizeIcon {
 		class += " btn-icon"

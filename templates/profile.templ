@@ -166,8 +166,21 @@ templ ImageGallery(pc PageContext) {
 			@Button(ButtonGhost, ButtonSizeDefault, templ.Attributes{"disabled": true, "class": "btn-gallery"}) {
 				画像一覧
 			}
+			if pc.IsOwner {
+				@Button(ButtonGhostRed, ButtonSizeIcon, templ.Attributes{"title": "画像を削除"}) {
+					@IconTrash()
+				}
+				@Button(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"title": "画像をアップロード"}) {
+					@IconArrowUpFromBracket()
+				}
+			}
 			@ButtonLink(ButtonGhostGreen, ButtonSizeIcon, templ.Attributes{"href": "#", "title": "画像をダウンロード"}) {
 				@IconDownload()
+			}
+			if pc.IsOwner {
+				@Button(ButtonGhostOrange, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "画像をピン留め"}) {
+					@IconThumbtack()
+				}
 			}
 			@Button(ButtonSolidPlain, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "次の画像"}) {
 				@IconChevronRight()
