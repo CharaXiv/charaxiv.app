@@ -1,0 +1,84 @@
+package templates
+
+templ DesignSystem() {
+	<style>
+		:root {
+			/* Colors - Primary */
+			--color-primary: #2563eb;
+			--color-primary-dark: #1d4ed8;
+			--color-primary-light: #dbeafe;
+
+			/* Colors - Semantic */
+			--color-background: #f5f5f5;
+			--color-surface: #ffffff;
+			--color-text: #333333;
+			--color-text-muted: #64748b;
+			--color-border: #e2e8f0;
+			--color-border-light: #f1f5f9;
+
+			/* Colors - Accent (for visualization, remove later) */
+			--color-accent-blue: #dbeafe;
+			--color-accent-yellow: #fef3c7;
+
+			/* Spacing - 4px grid */
+			--space-1: 4px;
+			--space-2: 8px;
+			--space-3: 12px;
+			--space-4: 16px;
+			--space-5: 20px;
+			--space-6: 24px;
+			--space-8: 32px;
+
+			/* Typography */
+			--font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+			--font-size-xs: 0.75rem;
+			--font-size-sm: 0.875rem;
+			--font-size-base: 1rem;
+			--font-size-lg: 1.125rem;
+			--font-size-xl: 1.25rem;
+			--font-size-2xl: 1.5rem;
+
+			--font-weight-normal: 400;
+			--font-weight-medium: 500;
+			--font-weight-semibold: 600;
+			--font-weight-bold: 700;
+
+			--line-height-tight: 1.25;
+			--line-height-normal: 1.5;
+
+			/* Border radius */
+			--radius-sm: 4px;
+			--radius-md: 8px;
+			--radius-lg: 12px;
+
+			/* Shadows */
+			--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+			--shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+			/* Transitions */
+			--transition-fast: 150ms ease;
+			--transition-normal: 250ms ease;
+		}
+
+		/* Reset */
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			font-family: var(--font-family);
+			font-size: var(--font-size-base);
+			line-height: var(--line-height-normal);
+			background: var(--color-background);
+			color: var(--color-text);
+			min-height: 100vh;
+		}
+
+		/* HTMX loading state */
+		.htmx-request {
+			opacity: 0.7;
+		}
+	</style>
+}

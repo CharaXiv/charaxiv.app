@@ -23,7 +23,7 @@ templ CharacterSheet() {
 				@media (min-width: 768px) {
 					.sheet {
 						grid-template-columns: minmax(0, 1fr) 320px;
-						gap: 8px;
+						gap: var(--space-2);
 						max-width: 768px;
 						margin: 0 auto;
 					}
@@ -32,7 +32,7 @@ templ CharacterSheet() {
 				@media (min-width: 1024px) {
 					.sheet {
 						grid-template-columns: minmax(0, 1fr) 648px;
-						gap: 16px;
+						gap: var(--space-4);
 						max-width: 1104px;
 					}
 				}
@@ -40,31 +40,15 @@ templ CharacterSheet() {
 				@media (min-width: 1536px) {
 					.sheet {
 						grid-template-columns: 440px 968px;
-						gap: 16px;
+						gap: var(--space-4);
 						max-width: 1536px;
 					}
-				}
-
-				.panel {
-					background: white;
-					border-radius: 8px;
-					padding: 1rem;
-					box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-				}
-
-				.panel h2 {
-					margin-bottom: 0.5rem;
-					color: #1e40af;
-				}
-
-				.sheet-left .panel {
-					background: #dbeafe;
 				}
 
 				.sheet-right {
 					display: grid;
 					grid-template-columns: 1fr;
-					gap: 8px;
+					gap: var(--space-2);
 				}
 
 				@media (min-width: 1024px) {
@@ -79,8 +63,27 @@ templ CharacterSheet() {
 					}
 				}
 
+				.panel {
+					background: var(--color-surface);
+					border-radius: var(--radius-md);
+					padding: var(--space-4);
+					box-shadow: var(--shadow-sm);
+				}
+
+				.panel h2 {
+					margin-bottom: var(--space-2);
+					color: var(--color-primary-dark);
+					font-size: var(--font-size-lg);
+					font-weight: var(--font-weight-semibold);
+				}
+
+				/* Temporary colors for visualization */
+				.sheet-left .panel {
+					background: var(--color-accent-blue);
+				}
+
 				.sheet-right .panel {
-					background: #fef3c7;
+					background: var(--color-accent-yellow);
 				}
 			</style>
 		}
