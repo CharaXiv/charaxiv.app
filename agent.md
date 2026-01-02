@@ -1,0 +1,62 @@
+# CharaXiv Agent Guide
+
+## Domain Model
+
+### Character vs Sheet
+
+A **Character** is the root entity representing a TRPG character. A character can have multiple **Sheets** (also called "systems") for different game systems or scenarios.
+
+This enables players to:
+- Use the same character across multiple game systems (CoC 6e, CoC 7e, Emoklore, etc.)
+- Have separate sheets for different scenarios within the same system
+- Share profile data (images, name) while keeping system-specific data separate
+
+### Data Hierarchy
+
+```
+Character
+├── Profile
+│   ├── name, ruby (reading)
+│   ├── images[] (shared across all sheets)
+│   ├── pinned image
+│   ├── tags[]
+│   └── public/secret memos (character-level)
+├── Access Control
+│   ├── owner
+│   ├── editors[]
+│   └── viewers[]
+└── Sheets[] (one per game system instance)
+    ├── id, key (system type), label
+    ├── pinned image (can differ from character)
+    ├── public/secret memos (scenario-level)
+    └── system-specific data (abilities, skills, etc.)
+```
+
+### Key Distinction: Memos
+
+- **Character-level memos**: General character background, personality, etc. Shown on the character page.
+- **Sheet-level memos**: Scenario-specific notes. Shown on the sheet page. Prefixed with "シナリオ" in UI.
+
+## URL Structure
+
+| Route | Page | Content |
+|-------|------|----------|
+| `/c/{characterId}` | Character page | Profile + character memos + list of sheets |
+| `/c/{characterId}/{systemKey}/{sheetId}` | Sheet page | Profile + scenario memos + system-specific data |
+
+## Current State
+
+The app currently renders a **sheet page** at `/`. This is a placeholder; proper routing with character/sheet IDs will be added with the database layer.
+
+## Legacy Reference
+
+The `~/LegacyCharaXiv` directory contains the previous SvelteKit/Firebase implementation. Useful for:
+- Understanding UI patterns and component structure
+- Game system data schemas (CoC 6e, CoC 7e, Emoklore)
+- Export formats (CCFOLIA, chat palettes)
+
+## Tech Decisions
+
+- **No JS frameworks**: HTMX + templ for interactivity
+- **Co-located styles**: CSS in templ files using `OnceHandle`
+- **OOB swaps**: For updating multiple page regions from one response
