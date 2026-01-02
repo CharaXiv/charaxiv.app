@@ -144,8 +144,8 @@ templ Profile(pc PageContext) {
 		<div class="profile-top">
 			@ImageGallery(pc)
 			<div class="name-section">
-				<input type="text" class="name-input" placeholder="名前" value="" readonly?={ !pc.IsOwner }/>
-				<input type="text" class="ruby-input" placeholder="よみがな" value="" readonly?={ !pc.IsOwner }/>
+				<input type="text" class="name-input" placeholder="名前" value="" readonly?={ pc.IsReadOnly() }/>
+				<input type="text" class="ruby-input" placeholder="よみがな" value="" readonly?={ pc.IsReadOnly() }/>
 			</div>
 		</div>
 		@MemoGroup(pc)
@@ -191,13 +191,13 @@ templ memoGroupContent(pc PageContext, oob bool) {
 			<div class="memo-header">
 				<h2 class="memo-title">公開メモ</h2>
 			</div>
-			@MarkdownEditor("public-memo", "public_memo", "公開メモを入力...", "", !pc.IsOwner)
+			@MarkdownEditor("public-memo", "public_memo", "公開メモを入力...", "", pc.IsReadOnly())
 		</div>
 		<div class="memo-section">
 			<div class="memo-header">
 				<h2 class="memo-title">秘匿メモ</h2>
 			</div>
-			@MarkdownEditor("secret-memo", "secret_memo", "秘匿メモを入力...", "", !pc.IsOwner)
+			@MarkdownEditor("secret-memo", "secret_memo", "秘匿メモを入力...", "", pc.IsReadOnly())
 		</div>
 	</div>
 }
