@@ -142,6 +142,27 @@ The character sheet uses a responsive two-column layout:
 | 1024px+ | 1fr / 648px, 16px gap, max 1104px | 1fr / 1fr |
 | 1536px+ | 440px / 968px, 16px gap, max 1536px | 1fr / 2fr |
 
+## Gotchas
+
+### Compression Middleware + templ
+
+Chi's `Compress` middleware requires `Content-Type` to be set **before** writing the response body. templ doesn't set this automatically since it writes to a generic `io.Writer`.
+
+```go
+// ❌ Won't compress - Content-Type not set when Write() is called
+r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+    templates.MyPage().Render(r.Context(), w)
+})
+
+// ✅ Will compress - Content-Type set before render
+r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "text/html; charset=utf-8")
+    templates.MyPage().Render(r.Context(), w)
+})
+```
+
+**Why?** The middleware checks `Content-Type` on the first `Write()` call to decide whether to compress. Go's auto-detection happens *during* the first write, which is too late.
+
 ## Component Patterns
 
 ### Inlined Styles with OnceHandle
