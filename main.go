@@ -22,6 +22,7 @@ func main() {
 	// Middleware
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.Compress(5))
 
 	// Static files
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
@@ -33,6 +34,7 @@ func main() {
 
 	// Character sheet
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		templates.CharacterSheet().Render(r.Context(), w)
 	})
 
