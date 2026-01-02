@@ -1,0 +1,15 @@
+[Unit]
+Description=CharaXiv Dev Server
+After=network.target
+
+[Service]
+Type=simple
+User=exedev
+WorkingDirectory=/home/exedev/charaxiv
+Environment=GCS_BUCKET=charaxiv-app-dev-assets
+ExecStart=/home/exedev/charaxiv/charaxiv
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

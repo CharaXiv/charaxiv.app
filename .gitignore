@@ -42,3 +42,4 @@ gcs-credentials.json
 
 # direnv
 .envrc
+conversation.md
