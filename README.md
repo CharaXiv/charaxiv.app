@@ -46,19 +46,29 @@ nginx -c /home/exedev/charaxiv/nginx.conf
 
 Access the app at: **https://charaxiv.exe.xyz:8080/**
 
+**The dev server handles everything automatically.** Just edit your files and the browser will refresh with your changes. No need to manually run `templ generate` or `go build`.
+
 ### How Live Reload Works
 
-1. Edit a `.go` or `.templ` file → air runs `gofmt` and `templ fmt`
-2. Edit a `.templ` file → air runs `templ generate`
-3. Generated `_templ.go` changes → air rebuilds and restarts server
-4. Server starts → triggers `/reload` endpoint
-5. Reloader waits for `/health` to return 200
-6. Reloader sends WebSocket message to all connected browsers
+The dev server (`./bin/dev`) runs multiple processes via [air](https://github.com/air-verse/air):
+
+1. **Formatter** - Watches `.go` and `.templ` files, runs `gofmt` and `templ fmt` on changes
+2. **Templ Generator** - Watches `.templ` files, runs `templ generate` on changes
+3. **Server Builder** - Watches `.go` files (including generated `_templ.go`), rebuilds and restarts the server
+4. **Reloader** - WebSocket server that notifies browsers to refresh
+
+The reload flow:
+1. Edit a `.go` or `.templ` file
+2. Formatter auto-formats the file
+3. If `.templ` file, generator creates/updates `_templ.go`
+4. Server rebuilds and restarts
+5. Reloader waits for `/health` endpoint to return 200
+6. Reloader sends WebSocket message to connected browsers
 7. Browsers automatically refresh
 
 ### Auto-formatting
 
-Files are automatically formatted on save:
+Files are automatically formatted when saved (handled by the dev server):
 - **Go files**: `gofmt -w`
 - **Templ files**: `templ fmt`
 
