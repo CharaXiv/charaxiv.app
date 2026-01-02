@@ -61,6 +61,24 @@ templ CharacterSheet() {
 					background: #dbeafe;
 				}
 
+				.sheet-right {
+					display: grid;
+					grid-template-columns: 1fr;
+					gap: 8px;
+				}
+
+				@media (min-width: 1024px) {
+					.sheet-right {
+						grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+					}
+				}
+
+				@media (min-width: 1536px) {
+					.sheet-right {
+						grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+					}
+				}
+
 				.sheet-right .panel {
 					background: #fef3c7;
 				}
@@ -76,9 +94,12 @@ templ CharacterSheet() {
 			</div>
 			<div class="sheet-right">
 				<div class="panel">
-					<h2>Right Panel</h2>
-					<p>This is the right column content.</p>
-					<p>It contains ability scores, parameters, and skills.</p>
+					<h2>Right-Left Panel</h2>
+					<p>Ability scores and parameters.</p>
+				</div>
+				<div class="panel">
+					<h2>Right-Right Panel</h2>
+					<p>Skills list.</p>
 				</div>
 			</div>
 		</div>
