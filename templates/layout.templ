@@ -6,8 +6,6 @@ func isDev() bool {
 	return os.Getenv("DEV") == "1"
 }
 
-var layoutStyles = templ.NewOnceHandle()
-
 // Layout renders the base HTML structure.
 // headerActions: content for the header actions area (buttons)
 // content: main page content
@@ -25,19 +23,12 @@ templ Layout(title string, headerActions templ.Component, content templ.Componen
 		</head>
 		<body>
 			@DesignSystem()
-			@layoutStyles.Once() {
-				<style>
-					.main {
-						padding: var(--space-4);
-					}
-				</style>
-			}
 			@Header() {
 				if headerActions != nil {
 					@headerActions
 				}
 			}
-			<main class="main">
+			<main>
 				@content
 			</main>
 			if isDev() {
