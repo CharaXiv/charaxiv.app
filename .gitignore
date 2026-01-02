@@ -31,3 +31,14 @@ terraform/*.tfvars
 terraform/.terraform.lock.hcl
 *.conf
 gcs-credentials.json
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+
+# direnv
+.envrc
