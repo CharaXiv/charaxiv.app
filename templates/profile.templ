@@ -182,13 +182,13 @@ templ MemoGroup(pc PageContext) {
 			<div class="memo-header">
 				<h2 class="memo-title">公開メモ</h2>
 			</div>
-			@MarkdownEditor("public-memo", "public_memo", "公開メモを入力...", "")
+			@MarkdownEditor("public-memo", "public_memo", "公開メモを入力...", "", !pc.IsOwner)
 		</div>
 		<div class="memo-section">
 			<div class="memo-header">
 				<h2 class="memo-title">秘匿メモ</h2>
 			</div>
-			@MarkdownEditor("secret-memo", "secret_memo", "秘匿メモを入力...", "")
+			@MarkdownEditor("secret-memo", "secret_memo", "秘匿メモを入力...", "", !pc.IsOwner)
 		</div>
 	</div>
 }

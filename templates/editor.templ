@@ -2,9 +2,156 @@ package templates
 
 var editorStyles = templ.NewOnceHandle()
 var editorScript = templ.NewOnceHandle()
+var markdownStyles = templ.NewOnceHandle()
+var markdownScript = templ.NewOnceHandle()
 
-// MarkdownEditor renders a textarea that will be enhanced with EasyMDE
-templ MarkdownEditor(id string, name string, placeholder string, value string) {
+// MarkdownEditor renders a textarea that will be enhanced with EasyMDE (edit mode)
+// or rendered markdown content (readonly mode)
+templ MarkdownEditor(id string, name string, placeholder string, value string, readonly bool) {
+	if readonly {
+		@MarkdownRenderer(value)
+	} else {
+		@MarkdownEditorEdit(id, name, placeholder, value)
+	}
+}
+
+// MarkdownRenderer renders markdown content as HTML
+templ MarkdownRenderer(content string) {
+	@markdownStyles.Once() {
+		<style>
+			.markdown-content {
+				min-height: 150px;
+				width: 100%;
+				padding: var(--space-3);
+				font-size: var(--font-size-base);
+				line-height: 1.6;
+			}
+
+			.markdown-content:empty::before {
+				content: '';
+				color: var(--slate-300);
+			}
+
+			/* Markdown rendered styles */
+			.markdown-content h1,
+			.markdown-content h2,
+			.markdown-content h3,
+			.markdown-content h4,
+			.markdown-content h5,
+			.markdown-content h6 {
+				margin-top: 0.5em;
+				margin-bottom: 0.25em;
+				line-height: 1.2;
+				font-weight: var(--font-weight-semibold);
+			}
+
+			.markdown-content h1,
+			.markdown-content h2 {
+				border-bottom: 1px solid var(--slate-200);
+				padding-bottom: 0.25em;
+			}
+
+			.markdown-content h1 { font-size: 1.5em; }
+			.markdown-content h2 { font-size: 1.25em; }
+			.markdown-content h3 { font-size: 1.125em; }
+
+			.markdown-content p {
+				margin: 0.5em 0;
+			}
+
+			.markdown-content blockquote {
+				border-left: 3px solid var(--slate-300);
+				padding-left: var(--space-3);
+				margin: 0.5em 0;
+				color: var(--slate-600);
+			}
+
+			.markdown-content ul,
+			.markdown-content ol {
+				padding-left: 1.5em;
+				margin: 0.5em 0;
+			}
+
+			.markdown-content li {
+				margin: 0.25em 0;
+			}
+
+			.markdown-content a {
+				color: var(--blue-500);
+				text-decoration: underline;
+			}
+
+			.markdown-content a:hover {
+				color: var(--blue-600);
+			}
+
+			.markdown-content code {
+				background: var(--slate-100);
+				padding: 0.1em 0.3em;
+				border-radius: var(--radius-sm);
+				font-size: 0.9em;
+			}
+
+			.markdown-content pre {
+				background: var(--slate-100);
+				padding: var(--space-2);
+				border-radius: var(--radius-md);
+				overflow-x: auto;
+				margin: 0.5em 0;
+			}
+
+			.markdown-content pre code {
+				background: none;
+				padding: 0;
+			}
+
+			.markdown-content strong {
+				font-weight: var(--font-weight-semibold);
+			}
+
+			.markdown-content em {
+				font-style: italic;
+			}
+
+			.markdown-content del {
+				text-decoration: line-through;
+			}
+		</style>
+	}
+	@markdownScript.Once() {
+		<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+		<script>
+			(function() {
+				function renderMarkdown() {
+					if (typeof marked === 'undefined') {
+						setTimeout(renderMarkdown, 100);
+						return;
+					}
+					
+					document.querySelectorAll('.markdown-content[data-markdown]:not([data-rendered])').forEach(function(el) {
+						el.setAttribute('data-rendered', 'true');
+						var content = el.getAttribute('data-markdown');
+						if (content) {
+							el.innerHTML = marked.parse(content);
+						}
+					});
+				}
+				
+				if (document.readyState === 'loading') {
+					document.addEventListener('DOMContentLoaded', renderMarkdown);
+				} else {
+					renderMarkdown();
+				}
+				
+				document.body.addEventListener('htmx:afterSwap', renderMarkdown);
+			})();
+		</script>
+	}
+	<div class="markdown-content" data-markdown={ content }></div>
+}
+
+// MarkdownEditorEdit renders the EasyMDE editor
+templ MarkdownEditorEdit(id string, name string, placeholder string, value string) {
 	@editorStyles.Once() {
 		<style>
 			.markdown-editor-wrapper {
