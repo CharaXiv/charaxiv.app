@@ -9,38 +9,24 @@ templ CharacterSheet(pc PageContext) {
 // CharacterHeaderActions renders the header buttons for the character sheet
 templ CharacterHeaderActions(pc PageContext) {
 	@HeaderActions("header-actions") {
-		@PreviewToggle(pc)
-		if pc.IsOwner {
-			@ButtonLink(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
-				@IconAddressBook()
-			}
-			@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{"title": "Share options"}) {
-				@IconArrowUpFromBracket()
-			}
-		} else {
-			@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "Import to account"}) {
-				@IconPaperPlane()
-			}
-		}
+		@characterHeaderButtons(pc)
 	}
 }
 
 // CharacterHeaderActionsOOB renders header actions with OOB swap for HTMX
 templ CharacterHeaderActionsOOB(pc PageContext) {
 	@HeaderActionsOOB("header-actions") {
-		@PreviewToggle(pc)
-		if pc.IsOwner {
-			@ButtonLink(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
-				@IconAddressBook()
-			}
-			@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{"title": "Share options"}) {
-				@IconArrowUpFromBracket()
-			}
-		} else {
-			@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "Import to account"}) {
-				@IconPaperPlane()
-			}
-		}
+		@characterHeaderButtons(pc)
+	}
+}
+
+templ characterHeaderButtons(pc PageContext) {
+	@PreviewToggle(pc)
+	@ButtonLink(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
+		@IconAddressBook()
+	}
+	@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{"title": "Share options"}) {
+		@IconArrowUpFromBracket()
 	}
 }
 
