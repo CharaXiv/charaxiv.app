@@ -8,7 +8,10 @@ func isDev() bool {
 
 var layoutStyles = templ.NewOnceHandle()
 
-templ Layout(title string, pc PageContext) {
+// Layout renders the base HTML structure.
+// headerActions: content for the header actions area (buttons)
+// content: main page content
+templ Layout(title string, headerActions templ.Component, content templ.Component) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -29,9 +32,13 @@ templ Layout(title string, pc PageContext) {
 					}
 				</style>
 			}
-			@Header(pc)
+			@Header() {
+				if headerActions != nil {
+					@headerActions
+				}
+			}
 			<main class="main">
-				{ children... }
+				@content
 			</main>
 			if isDev() {
 				@liveReloadScript()

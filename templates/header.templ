@@ -2,7 +2,9 @@ package templates
 
 var headerStyles = templ.NewOnceHandle()
 
-templ Header(pc PageContext) {
+// Header renders the app header with logo and action buttons.
+// Pass buttons as children to customize the header actions.
+templ Header() {
 	@headerStyles.Once() {
 		<style>
 			.header {
@@ -67,79 +69,23 @@ templ Header(pc PageContext) {
 			@IconLayerGroup()
 			@LogoCharaXiv()
 		</a>
-		@HeaderActions(pc)
+		<div class="header-actions">
+			{ children... }
+		</div>
 	</header>
 }
 
-// PreviewToggle renders the preview mode toggle button
-// When in owner mode (IsOwner=true), clicking switches to preview mode
-// When in preview mode (IsOwner=false), clicking switches back to owner mode
-// HeaderActions contains the preview toggle and context-dependent buttons
-templ HeaderActions(pc PageContext) {
-	<div id="header-actions" class="header-actions">
-		@PreviewToggle(pc)
-		if pc.IsOwner {
-			@ButtonLink(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
-				@IconAddressBook()
-			}
-			@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{"title": "Share options"}) {
-				@IconArrowUpFromBracket()
-			}
-		} else {
-			@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "Import to account"}) {
-				@IconPaperPlane()
-			}
-		}
+// HeaderActions wraps header action buttons with an ID for HTMX targeting.
+// Use this when you need to swap header actions via HTMX.
+templ HeaderActions(id string) {
+	<div id={ id } class="header-actions">
+		{ children... }
 	</div>
 }
 
-// HeaderActionsOOB returns HeaderActions with OOB swap attribute
-templ HeaderActionsOOB(pc PageContext) {
-	<div id="header-actions" class="header-actions" hx-swap-oob="true">
-		@PreviewToggle(pc)
-		if pc.IsOwner {
-			@ButtonLink(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
-				@IconAddressBook()
-			}
-			@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{"title": "Share options"}) {
-				@IconArrowUpFromBracket()
-			}
-		} else {
-			@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "Import to account"}) {
-				@IconPaperPlane()
-			}
-		}
+// HeaderActionsOOB wraps header action buttons with OOB swap attribute.
+templ HeaderActionsOOB(id string) {
+	<div id={ id } class="header-actions" hx-swap-oob="true">
+		{ children... }
 	</div>
-}
-
-// PreviewToggle renders the preview mode toggle button
-templ PreviewToggle(pc PageContext) {
-	if pc.IsOwner {
-		@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{
-			"id":        "preview-toggle",
-			"title":     "Preview as visitor",
-			"hx-post":   "/api/preview/on",
-			"hx-target": "#memo-group",
-			"hx-swap":   "outerHTML",
-		}) {
-			@IconEye()
-		}
-	} else {
-		@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{
-			"id":        "preview-toggle",
-			"title":     "Exit preview mode",
-			"hx-post":   "/api/preview/off",
-			"hx-target": "#memo-group",
-			"hx-swap":   "outerHTML",
-		}) {
-			@IconEye()
-		}
-	}
-}
-
-// PreviewModeFragments returns the fragments needed for preview mode toggle
-// MemoGroup is the primary target, HeaderActions is OOB
-templ PreviewModeFragments(pc PageContext) {
-	@MemoGroup(pc)
-	@HeaderActionsOOB(pc)
 }

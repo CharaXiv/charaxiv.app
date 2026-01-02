@@ -3,97 +3,167 @@ package templates
 var sheetStyles = templ.NewOnceHandle()
 
 templ CharacterSheet(pc PageContext) {
-	@Layout("Character", pc) {
-		@sheetStyles.Once() {
-			<style>
+	@Layout("Character", CharacterHeaderActions(pc), CharacterContent(pc))
+}
+
+// CharacterHeaderActions renders the header buttons for the character sheet
+templ CharacterHeaderActions(pc PageContext) {
+	@HeaderActions("header-actions") {
+		@PreviewToggle(pc)
+		if pc.IsOwner {
+			@ButtonLink(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
+				@IconAddressBook()
+			}
+			@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{"title": "Share options"}) {
+				@IconArrowUpFromBracket()
+			}
+		} else {
+			@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "Import to account"}) {
+				@IconPaperPlane()
+			}
+		}
+	}
+}
+
+// CharacterHeaderActionsOOB renders header actions with OOB swap for HTMX
+templ CharacterHeaderActionsOOB(pc PageContext) {
+	@HeaderActionsOOB("header-actions") {
+		@PreviewToggle(pc)
+		if pc.IsOwner {
+			@ButtonLink(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
+				@IconAddressBook()
+			}
+			@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{"title": "Share options"}) {
+				@IconArrowUpFromBracket()
+			}
+		} else {
+			@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "Import to account"}) {
+				@IconPaperPlane()
+			}
+		}
+	}
+}
+
+// PreviewToggle renders the preview mode toggle button
+templ PreviewToggle(pc PageContext) {
+	if pc.IsOwner {
+		@Button(ButtonGhost, ButtonSizeIcon, templ.Attributes{
+			"id":        "preview-toggle",
+			"title":     "Preview as visitor",
+			"hx-post":   "/api/preview/on",
+			"hx-target": "#memo-group",
+			"hx-swap":   "outerHTML",
+		}) {
+			@IconEye()
+		}
+	} else {
+		@Button(ButtonSolidBlue, ButtonSizeIcon, templ.Attributes{
+			"id":        "preview-toggle",
+			"title":     "Exit preview mode",
+			"hx-post":   "/api/preview/off",
+			"hx-target": "#memo-group",
+			"hx-swap":   "outerHTML",
+		}) {
+			@IconEye()
+		}
+	}
+}
+
+// PreviewModeFragments returns the fragments needed for preview mode toggle
+templ PreviewModeFragments(pc PageContext) {
+	@MemoGroup(pc)
+	@CharacterHeaderActionsOOB(pc)
+}
+
+// CharacterContent renders the main character sheet content
+templ CharacterContent(pc PageContext) {
+	@sheetStyles.Once() {
+		<style>
+			.sheet {
+				display: grid;
+				grid-template-columns: 1fr;
+				max-width: 440px;
+				margin: 0 auto;
+			}
+
+			@media (min-width: 640px) {
 				.sheet {
-					display: grid;
-					grid-template-columns: 1fr;
-					max-width: 440px;
+					grid-template-columns: minmax(0, 1fr) 320px;
+					max-width: none;
+				}
+			}
+
+			@media (min-width: 768px) {
+				.sheet {
+					grid-template-columns: minmax(0, 1fr) 320px;
+					gap: var(--space-2);
+					max-width: 768px;
 					margin: 0 auto;
 				}
+			}
 
-				@media (min-width: 640px) {
-					.sheet {
-						grid-template-columns: minmax(0, 1fr) 320px;
-						max-width: none;
-					}
+			@media (min-width: 1024px) {
+				.sheet {
+					grid-template-columns: minmax(0, 1fr) 648px;
+					gap: var(--space-4);
+					max-width: 1104px;
 				}
+			}
 
-				@media (min-width: 768px) {
-					.sheet {
-						grid-template-columns: minmax(0, 1fr) 320px;
-						gap: var(--space-2);
-						max-width: 768px;
-						margin: 0 auto;
-					}
+			@media (min-width: 1536px) {
+				.sheet {
+					grid-template-columns: 440px 968px;
+					gap: var(--space-4);
+					max-width: 1536px;
 				}
+			}
 
-				@media (min-width: 1024px) {
-					.sheet {
-						grid-template-columns: minmax(0, 1fr) 648px;
-						gap: var(--space-4);
-						max-width: 1104px;
-					}
-				}
+			.sheet-right {
+				display: grid;
+				grid-template-columns: 1fr;
+				gap: var(--space-2);
+			}
 
-				@media (min-width: 1536px) {
-					.sheet {
-						grid-template-columns: 440px 968px;
-						gap: var(--space-4);
-						max-width: 1536px;
-					}
-				}
-
+			@media (min-width: 1024px) {
 				.sheet-right {
-					display: grid;
-					grid-template-columns: 1fr;
-					gap: var(--space-2);
+					grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 				}
+			}
 
-				@media (min-width: 1024px) {
-					.sheet-right {
-						grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-					}
+			@media (min-width: 1536px) {
+				.sheet-right {
+					grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
 				}
+			}
 
-				@media (min-width: 1536px) {
-					.sheet-right {
-						grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-					}
-				}
+			.panel {
+				background: var(--white);
+				border-radius: var(--radius-lg);
+				padding: var(--space-4);
+				box-shadow: var(--shadow-default);
+			}
 
-				.panel {
-					background: var(--white);
-					border-radius: var(--radius-lg);
-					padding: var(--space-4);
-					box-shadow: var(--shadow-default);
-				}
-
-				.panel h2 {
-					margin-bottom: var(--space-2);
-					color: var(--blue-800);
-					font-size: var(--font-size-lg);
-					font-weight: var(--font-weight-semibold);
-				}
-
-
-			</style>
-		}
-		<div class="sheet">
-			<div class="sheet-left">
-				@Profile(pc)
+			.panel h2 {
+				margin-bottom: var(--space-2);
+				color: var(--blue-800);
+				font-size: var(--font-size-lg);
+				font-weight: var(--font-weight-semibold);
+			}
+		</style>
+	}
+	<div class="sheet">
+		<div class="sheet-left">
+			@Profile(pc)
+		</div>
+		<div class="sheet-right">
+			<div class="panel">
+				<h2>Right-Left Panel</h2>
+				<p>Ability scores and parameters.</p>
 			</div>
-			<div class="sheet-right">
-				<div class="panel">
-					<h2>Right-Left Panel</h2>
-					<p>Ability scores and parameters.</p>
-				</div>
-				<div class="panel">
-					<h2>Right-Right Panel</h2>
-					<p>Skills list.</p>
-				</div>
+			<div class="panel">
+				<h2>Right-Right Panel</h2>
+				<p>Skills list.</p>
 			</div>
 		</div>
-	}
+	</div>
 }
