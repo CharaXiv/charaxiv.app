@@ -21,29 +21,12 @@ templ Layout(title string) {
 			@DesignSystem()
 			@layoutStyles.Once() {
 				<style>
-					.header {
-						background: var(--color-primary);
-						padding: var(--space-4) var(--space-6);
-						position: sticky;
-						top: 0;
-						z-index: 100;
-					}
-
-					.logo {
-						color: white;
-						text-decoration: none;
-						font-size: var(--font-size-2xl);
-						font-weight: var(--font-weight-bold);
-					}
-
 					.main {
 						padding: var(--space-4);
 					}
 				</style>
 			}
-			<header class="header">
-				<a href="/" class="logo">CharaXiv</a>
-			</header>
+			@Header()
 			<main class="main">
 				{ children... }
 			</main>
