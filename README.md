@@ -7,8 +7,9 @@ A TRPG character sheet management app built with Go, HTMX, and templ.
 - **Go** - Backend server
 - **templ** - Type-safe HTML templating
 - **HTMX** - Frontend interactivity without JavaScript frameworks
-- **sqlc** - Type-safe SQL (pending)
-- **SQLite** - Database (pending)
+- **SQLite** - Database (with sqlc for type-safe queries)
+- **GCS** - Google Cloud Storage for images and assets
+- **Terraform** - Infrastructure as Code
 
 ## Project Structure
 
@@ -19,7 +20,21 @@ charaxiv/
 │   ├── styles.templ   # Design system (CSS variables)
 │   ├── layout.templ   # Base HTML layout
 │   └── character.templ # Character sheet components
+├── storage/           # Storage abstraction layer
+│   ├── storage.go     # Storage interface
+│   ├── gcs.go         # Google Cloud Storage implementation
+│   └── memory.go      # In-memory implementation (for testing)
+├── terraform/         # Infrastructure as Code
+│   ├── modules/       # Reusable Terraform modules
+│   │   ├── gcs/       # GCS bucket + service account
+│   │   └── cloudrun/  # Cloud Run deployment
+│   ├── environments/  # Environment-specific configs
+│   │   ├── dev/       # Development (US-West)
+│   │   └── prd/       # Production (Tokyo)
+│   ├── bootstrap.yaml # Deployment Manager for tfstate bucket
+│   └── bootstrap.jinja
 ├── main.go            # Application entry point
+├── Dockerfile         # Container build
 ├── nginx.conf         # Proxy config for WebSocket support
 ├── .air.*.toml        # Hot reload configuration
 └── sqlc.yaml          # SQL code generation config
@@ -78,6 +93,90 @@ Files are automatically formatted when saved (handled by the dev server):
 templ generate
 go build -o charaxiv .
 ./charaxiv
+```
+
+### Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GCS_BUCKET` | GCS bucket name for storage | No (falls back to in-memory) |
+| `PORT` | Server port | No (default: 8000) |
+| `DEV` | Enable dev mode (live reload trigger) | No |
+
+## Infrastructure
+
+### Architecture
+
+```
+Development (exe.dev VM - US-West):
+  App Server → GCS (charaxiv-app-dev-assets)
+
+Production (Cloud Run - Tokyo):
+  Users → Cloud Run → GCS (charaxiv-app-prd-assets)
+                    → SQLite (local + Litestream backup)
+```
+
+### Storage
+
+The app uses a `Storage` interface that abstracts away the storage backend:
+
+```go
+type Storage interface {
+    Upload(ctx, key, data, contentType) error
+    Download(ctx, key) (io.ReadCloser, error)
+    Delete(ctx, key) error
+    Exists(ctx, key) (bool, error)
+    SignedURL(ctx, key, expiry) (string, error)
+    SignedUploadURL(ctx, key, contentType, expiry) (string, error)
+    PublicURL(key) string
+}
+```
+
+Implementations:
+- **GCS** - Production storage, uses Application Default Credentials
+- **Memory** - In-memory storage for testing (no external dependencies)
+
+### Terraform Setup
+
+**Prerequisites:**
+- Google Cloud SDK (`gcloud`)
+- Terraform
+- A GCP project
+
+**1. Authenticate with GCP:**
+```bash
+gcloud auth login
+gcloud auth application-default login
+gcloud config set project YOUR_PROJECT_ID
+```
+
+**2. Bootstrap tfstate bucket (one-time):**
+```bash
+gcloud deployment-manager deployments create tfstate \
+  --config terraform/bootstrap.yaml
+```
+
+**3. Initialize and apply Terraform:**
+```bash
+cd terraform/environments/dev
+cp backend.conf.example backend.conf
+cp terraform.tfvars.example terraform.tfvars
+# Edit both files with your values
+
+terraform init -backend-config=backend.conf
+terraform apply
+```
+
+### Cloud Run Deployment
+
+```bash
+# Build and push container
+./bin/deploy prd
+
+# Or manually:
+docker build -t IMAGE_URL .
+docker push IMAGE_URL
+gcloud run deploy charaxiv-prd --image IMAGE_URL --region asia-northeast1
 ```
 
 ## Design System
