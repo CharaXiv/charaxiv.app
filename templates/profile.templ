@@ -10,7 +10,6 @@ templ Profile() {
 				flex-direction: column;
 				gap: var(--space-8);
 				background: var(--white);
-				padding: var(--space-4);
 			}
 
 			.profile-top {
@@ -57,10 +56,10 @@ templ Profile() {
 			}
 
 			.image-controls {
+				width: 100%;
 				display: flex;
 				flex-direction: row;
 				gap: var(--space-2);
-				padding: 0 var(--space-2);
 			}
 
 			.image-controls .btn {
@@ -75,7 +74,7 @@ templ Profile() {
 			.name-section {
 				display: flex;
 				flex-direction: column;
-				padding: 0 var(--space-1);
+				padding: 0 var(--space-4);
 			}
 
 			.name-input {
@@ -115,6 +114,8 @@ templ Profile() {
 				display: flex;
 				flex-direction: column;
 				gap: var(--space-8);
+				padding: 0 var(--space-4);
+				padding-bottom: var(--space-4);
 			}
 
 			.memo-section {
@@ -136,27 +137,6 @@ templ Profile() {
 				font-weight: var(--font-weight-semibold);
 				color: var(--slate-700);
 				padding-left: var(--space-3);
-			}
-
-			.memo-editor {
-				min-height: 120px;
-				width: 100%;
-				padding: var(--space-3);
-				border: 1px solid var(--slate-200);
-				border-radius: var(--radius-md);
-				font-size: var(--font-size-base);
-				line-height: 1.6;
-				resize: vertical;
-				outline: none;
-				transition: var(--transition-fast);
-			}
-
-			.memo-editor:focus {
-				border-color: var(--blue-500);
-			}
-
-			.memo-editor::placeholder {
-				color: var(--slate-300);
 			}
 		</style>
 	}
@@ -202,13 +182,13 @@ templ MemoGroup() {
 			<div class="memo-header">
 				<h2 class="memo-title">公開メモ</h2>
 			</div>
-			<textarea class="memo-editor" placeholder="公開メモを入力..."></textarea>
+			@MarkdownEditor("public-memo", "public_memo", "公開メモを入力...", "")
 		</div>
 		<div class="memo-section">
 			<div class="memo-header">
 				<h2 class="memo-title">秘匿メモ</h2>
 			</div>
-			<textarea class="memo-editor" placeholder="秘匿メモを入力..."></textarea>
+			@MarkdownEditor("secret-memo", "secret_memo", "秘匿メモを入力...", "")
 		</div>
 	</div>
 }

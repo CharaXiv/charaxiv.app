@@ -1,0 +1,138 @@
+package templates
+
+var editorStyles = templ.NewOnceHandle()
+var editorScript = templ.NewOnceHandle()
+
+// MarkdownEditor renders a textarea that will be enhanced with EasyMDE
+templ MarkdownEditor(id string, name string, placeholder string, value string) {
+	@editorStyles.Once() {
+		<style>
+			.markdown-editor-wrapper {
+				width: 100%;
+			}
+
+			/* EasyMDE customizations */
+			.markdown-editor-wrapper .EasyMDEContainer {
+				width: 100%;
+			}
+
+			.markdown-editor-wrapper .EasyMDEContainer .CodeMirror {
+				border: 1px solid var(--slate-200);
+				border-radius: 0 0 var(--radius-md) var(--radius-md);
+				font-family: inherit;
+				font-size: var(--font-size-base);
+				min-height: 150px;
+				padding: var(--space-2);
+			}
+
+			.markdown-editor-wrapper .EasyMDEContainer .CodeMirror-focused {
+				border-color: var(--blue-500);
+			}
+
+			.markdown-editor-wrapper .editor-toolbar {
+				border: 1px solid var(--slate-200);
+				border-bottom: none;
+				border-radius: var(--radius-md) var(--radius-md) 0 0;
+				background: var(--slate-50);
+				padding: var(--space-2);
+			}
+
+			.markdown-editor-wrapper .editor-toolbar button {
+				color: var(--slate-600);
+				border: none;
+				border-radius: var(--radius-sm);
+			}
+
+			.markdown-editor-wrapper .editor-toolbar button:hover {
+				background: var(--slate-200);
+				border: none;
+			}
+
+			.markdown-editor-wrapper .editor-toolbar button.active {
+				background: var(--slate-300);
+				border: none;
+			}
+
+			.markdown-editor-wrapper .editor-toolbar i.separator {
+				border-left-color: var(--slate-300);
+				border-right-color: var(--slate-100);
+			}
+
+			/* Fallback textarea styling (before JS loads) */
+			.markdown-editor-wrapper textarea.markdown-editor {
+				min-height: 150px;
+				width: 100%;
+				padding: var(--space-3);
+				border: 1px solid var(--slate-200);
+				border-radius: var(--radius-md);
+				font-size: var(--font-size-base);
+				line-height: 1.6;
+				resize: vertical;
+				outline: none;
+				transition: var(--transition-fast);
+				font-family: inherit;
+			}
+
+			.markdown-editor-wrapper textarea.markdown-editor:focus {
+				border-color: var(--blue-500);
+			}
+
+			.markdown-editor-wrapper textarea.markdown-editor::placeholder {
+				color: var(--slate-300);
+			}
+		</style>
+	}
+	@editorScript.Once() {
+		<script>
+			(function() {
+				function initMarkdownEditors() {
+					if (typeof EasyMDE === 'undefined') {
+						setTimeout(initMarkdownEditors, 100);
+						return;
+					}
+					
+					document.querySelectorAll('textarea.markdown-editor:not([data-easymde-init])').forEach(function(textarea) {
+						textarea.setAttribute('data-easymde-init', 'true');
+						
+						new EasyMDE({
+							element: textarea,
+							status: false,
+							spellChecker: false,
+							minHeight: '150px',
+							unorderedListStyle: '-',
+							promptURLs: true,
+							promptTexts: {
+								image: '画像のURL',
+								link: 'リンク先URL'
+							},
+							toolbar: [
+								'heading', 'quote', 'unordered-list', 'ordered-list',
+								'|',
+								'bold', 'italic', 'strikethrough',
+								'|',
+								'link'
+							]
+						});
+					});
+				}
+				
+				if (document.readyState === 'loading') {
+					document.addEventListener('DOMContentLoaded', initMarkdownEditors);
+				} else {
+					initMarkdownEditors();
+				}
+				
+				// Re-init on HTMX swaps
+				document.body.addEventListener('htmx:afterSwap', initMarkdownEditors);
+			})();
+		</script>
+	}
+	<div class="markdown-editor-wrapper">
+		<textarea
+			id={ id }
+			name={ name }
+			class="markdown-editor"
+			placeholder={ placeholder }
+		>{ value }</textarea>
+	</div>
+}

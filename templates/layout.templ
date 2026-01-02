@@ -16,6 +16,9 @@ templ Layout(title string) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title } - CharaXiv</title>
 			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+			<!-- EasyMDE Markdown Editor -->
+			<link rel="stylesheet" href="https://unpkg.com/easymde@2.18.0/dist/easymde.min.css"/>
+			<script src="https://unpkg.com/easymde@2.18.0/dist/easymde.min.js"></script>
 		</head>
 		<body>
 			@DesignSystem()
