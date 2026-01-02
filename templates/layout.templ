@@ -29,12 +29,10 @@ templ Layout(title string, pc PageContext) {
 					}
 				</style>
 			}
-			<div id="app">
-				@Header(pc)
-				<main class="main">
-					{ children... }
-				</main>
-			</div>
+			@Header(pc)
+			<main class="main">
+				{ children... }
+			</main>
 			if isDev() {
 				@liveReloadScript()
 			}
