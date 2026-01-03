@@ -194,7 +194,7 @@ templ memoGroupContent(pc PageContext, oob bool) {
 			@MarkdownEditor("public-memo", "public_memo", "公開メモ", "公開メモを入力...", "", pc.IsReadOnly())
 		</div>
 		<div class="memo-section">
-			@MarkdownEditor("secret-memo", "secret_memo", "秘匿メモ", "秘匿メモを入力...", "", pc.IsReadOnly())
+			@SecretMarkdownEditor("secret-memo", "secret_memo", "秘匿メモ", "秘匿メモを入力...", "", pc.IsReadOnly())
 		</div>
 	</div>
 }

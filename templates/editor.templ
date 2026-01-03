@@ -9,14 +9,23 @@ var markdownScript = templ.NewOnceHandle()
 // or rendered markdown content (readonly mode)
 templ MarkdownEditor(id string, name string, title string, placeholder string, value string, readonly bool) {
 	if readonly {
-		@MarkdownRenderer(title, value)
+		@MarkdownRenderer(title, value, false)
 	} else {
-		@MarkdownEditorEdit(id, name, placeholder, value)
+		@MarkdownEditorEdit(id, name, placeholder, value, false)
+	}
+}
+
+// SecretMarkdownEditor is like MarkdownEditor but with password protection
+templ SecretMarkdownEditor(id string, name string, title string, placeholder string, value string, readonly bool) {
+	if readonly {
+		@MarkdownRenderer(title, value, true)
+	} else {
+		@MarkdownEditorEdit(id, name, placeholder, value, true)
 	}
 }
 
 // MarkdownRenderer renders markdown content as HTML with a title
-templ MarkdownRenderer(title string, content string) {
+templ MarkdownRenderer(title string, content string, secret bool) {
 	@markdownStyles.Once() {
 		<style>
 			.markdown-renderer {
@@ -25,13 +34,50 @@ templ MarkdownRenderer(title string, content string) {
 				overflow: hidden;
 			}
 
+			.markdown-renderer-header {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+				padding: var(--space-2) var(--space-4);
+				background: var(--slate-50);
+				border-bottom: 1px solid var(--slate-200);
+			}
+
 			.markdown-renderer-title {
 				font-size: var(--font-size-xl);
 				font-weight: var(--font-weight-medium);
 				color: var(--slate-500);
-				padding: var(--space-3) var(--space-4);
-				background: var(--slate-50);
-				border-bottom: 1px solid var(--slate-200);
+			}
+
+			.markdown-secret-toggle {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 32px;
+				height: 32px;
+				border: none;
+				background: transparent;
+				color: var(--slate-500);
+				border-radius: var(--radius-md);
+				cursor: pointer;
+				transition: var(--transition-fast);
+			}
+
+			.markdown-secret-toggle:hover {
+				background: var(--slate-200);
+				color: var(--slate-700);
+			}
+
+			.markdown-secret-toggle .icon {
+				width: 16px;
+				height: 16px;
+			}
+
+			.markdown-content-hidden {
+				filter: blur(8px);
+				user-select: none;
+				pointer-events: none;
 			}
 
 			.markdown-content {
@@ -163,13 +209,24 @@ templ MarkdownRenderer(title string, content string) {
 		</script>
 	}
 	<div class="markdown-renderer">
-		<div class="markdown-renderer-title">{ title }</div>
-		<div class="markdown-content" data-markdown={ content }></div>
+		<div class="markdown-renderer-header">
+			<div class="markdown-renderer-title">{ title }</div>
+			if secret {
+				<button type="button" class="markdown-secret-toggle" title="秘匿メモを表示">
+					@IconEyeSlash()
+				</button>
+			}
+		</div>
+		if secret {
+			<div class="markdown-content markdown-content-hidden" data-markdown={ content }></div>
+		} else {
+			<div class="markdown-content" data-markdown={ content }></div>
+		}
 	</div>
 }
 
 // MarkdownEditorEdit renders the EasyMDE editor
-templ MarkdownEditorEdit(id string, name string, placeholder string, value string) {
+templ MarkdownEditorEdit(id string, name string, placeholder string, value string, secret bool) {
 	@editorStyles.Once() {
 		<style>
 			.markdown-editor-wrapper {
@@ -253,6 +310,16 @@ templ MarkdownEditorEdit(id string, name string, placeholder string, value strin
 	@editorScript.Once() {
 		<script>
 			(function() {
+				var baseToolbar = [
+					'heading', 'quote', 'unordered-list', 'ordered-list',
+					'|',
+					'bold', 'italic', 'strikethrough',
+					'|',
+					'link'
+				];
+
+				var keySvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style="width:1em;height:1em"><path d="M336 352c97.2 0 176-78.8 176-176S433.2 0 336 0S160 78.8 160 176c0 18.7 2.9 36.8 8.3 53.7L7 391c-4.5 4.5-7 10.6-7 17l0 80c0 13.3 10.7 24 24 24l80 0c13.3 0 24-10.7 24-24l0-40 40 0c13.3 0 24-10.7 24-24l0-40 40 0c6.4 0 12.5-2.5 17-7l33.3-33.3c16.9 5.4 35 8.3 53.7 8.3zM376 96a40 40 0 1 1 0 80 40 40 0 1 1 0-80z"/></svg>';
+
 				function initMarkdownEditors() {
 					if (typeof EasyMDE === 'undefined') {
 						setTimeout(initMarkdownEditors, 100);
@@ -261,8 +328,35 @@ templ MarkdownEditorEdit(id string, name string, placeholder string, value strin
 					
 					document.querySelectorAll('textarea.markdown-editor:not([data-easymde-init])').forEach(function(textarea) {
 						textarea.setAttribute('data-easymde-init', 'true');
+						var isSecret = textarea.hasAttribute('data-secret');
 						
-						new EasyMDE({
+						var toolbar = baseToolbar.slice();
+						if (isSecret) {
+							toolbar.push('|');
+							toolbar.push({
+								name: 'password',
+								action: function(editor) {
+									var password = prompt('秘匿メモのパスワードを設定してください');
+									if (password !== null) {
+										// Store password - will be handled by form submission
+										var wrapper = editor.element.closest('.markdown-editor-wrapper');
+										var input = wrapper.querySelector('input[name="secret_password"]');
+										if (!input) {
+											input = document.createElement('input');
+											input.type = 'hidden';
+											input.name = 'secret_password';
+											wrapper.appendChild(input);
+										}
+										input.value = password;
+										alert('パスワードを設定しました');
+									}
+								},
+								className: 'password-button',
+								title: 'パスワード設定'
+							});
+						}
+						
+						var mde = new EasyMDE({
 							element: textarea,
 							status: false,
 							spellChecker: false,
@@ -273,14 +367,16 @@ templ MarkdownEditorEdit(id string, name string, placeholder string, value strin
 								image: '画像のURL',
 								link: 'リンク先URL'
 							},
-							toolbar: [
-								'heading', 'quote', 'unordered-list', 'ordered-list',
-								'|',
-								'bold', 'italic', 'strikethrough',
-								'|',
-								'link'
-							]
+							toolbar: toolbar
 						});
+
+						// Replace button content with SVG for password button
+						if (isSecret) {
+							var btn = mde.toolbarElements['password'];
+							if (btn) {
+								btn.innerHTML = keySvg;
+							}
+						}
 					});
 				}
 				
@@ -301,6 +397,7 @@ templ MarkdownEditorEdit(id string, name string, placeholder string, value strin
 			name={ name }
 			class="markdown-editor"
 			placeholder={ placeholder }
+			data-secret?={ secret }
 		>{ value }</textarea>
 	</div>
 }
