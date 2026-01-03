@@ -17,7 +17,7 @@ templ Profile(pc PageContext) {
 			.image-gallery {
 				display: flex;
 				flex-direction: column;
-				gap: var(--space-4);
+				gap: var(--space-2);
 			}
 
 			.image-display {
@@ -84,6 +84,12 @@ templ Profile(pc PageContext) {
 				border: none;
 				outline: none;
 				background: transparent;
+				border-radius: var(--radius-md);
+				transition: background var(--transition-fast);
+			}
+
+			.name-input:hover {
+				background: var(--slate-100);
 			}
 
 			.name-input::placeholder {
@@ -100,6 +106,12 @@ templ Profile(pc PageContext) {
 				border: none;
 				outline: none;
 				background: transparent;
+				border-radius: var(--radius-md);
+				transition: background var(--transition-fast);
+			}
+
+			.ruby-input:hover {
+				background: var(--slate-100);
 			}
 
 			.ruby-input::placeholder {
@@ -117,7 +129,7 @@ templ Profile(pc PageContext) {
 			.memo-section {
 				display: flex;
 				flex-direction: column;
-				gap: var(--space-4);
+				gap: var(--space-2);
 			}
 
 			.memo-header {
