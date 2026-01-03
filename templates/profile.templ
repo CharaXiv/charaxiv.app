@@ -189,7 +189,13 @@ templ MemoGroupOOB(pc PageContext) {
 }
 
 templ memoGroupContent(pc PageContext, oob bool) {
-	<div id="memo-group" class="memo-group" hx-swap-oob?={ oob }>
+	<div
+		id="memo-group"
+		class="memo-group"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
 		<div class="memo-section">
 			@MarkdownEditor("public-memo", "public_memo", "公開メモ", "公開メモを入力...", "", pc.IsReadOnly())
 		</div>
@@ -210,7 +216,13 @@ templ ScenarioMemoGroupOOB(pc PageContext) {
 }
 
 templ scenarioMemoGroupContent(pc PageContext, oob bool) {
-	<div id="scenario-memo-group" class="memo-group" hx-swap-oob?={ oob }>
+	<div
+		id="scenario-memo-group"
+		class="memo-group"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
 		<div class="memo-section">
 			@MarkdownEditor("scenario-public-memo", "scenario_public_memo", "シナリオ公開メモ", "シナリオ公開メモを入力...", "", pc.IsReadOnly())
 		</div>
