@@ -17,6 +17,11 @@ templ Profile(pc PageContext) {
 				display: flex;
 				flex-direction: column;
 				gap: var(--space-2);
+				background: var(--white);
+				border-radius: var(--radius-lg);
+				padding: var(--space-4);
+				padding-top: 0;
+				overflow: hidden;
 			}
 
 			.image-display {
@@ -68,7 +73,7 @@ templ Profile(pc PageContext) {
 			.name-section {
 				display: flex;
 				flex-direction: column;
-				padding: 0 var(--space-2);
+				padding: var(--space-3) var(--space-4);
 			}
 
 			.name-input {
