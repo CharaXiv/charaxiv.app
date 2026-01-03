@@ -1,0 +1,186 @@
+package templates
+
+import "strconv"
+
+var statusStyles = templ.NewOnceHandle()
+
+// StatusVariable represents a single ability score with base, perm, and temp values
+type StatusVariable struct {
+	Key  string
+	Base int
+	Perm int
+	Temp int
+}
+
+// Sum returns the total value of the variable
+func (v StatusVariable) Sum() int {
+	return v.Base + v.Perm + v.Temp
+}
+
+// StatusPanel renders the ability scores panel
+templ StatusPanel(pc PageContext, variables []StatusVariable) {
+	@statusStyles.Once() {
+		<style>
+			.status-panel {
+				background: var(--white);
+				border-radius: var(--radius-lg);
+				padding: var(--space-4);
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-4);
+			}
+
+			.status-header {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+			}
+
+			.status-title {
+				font-size: var(--font-size-xl);
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-800);
+			}
+
+			.status-actions {
+				display: flex;
+				flex-direction: row;
+				gap: var(--space-2);
+			}
+
+			.status-grid {
+				display: grid;
+				grid-template-columns: 48px 1fr 40px;
+				gap: var(--space-2);
+				align-items: center;
+			}
+
+			.status-key {
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-700);
+				font-size: var(--font-size-sm);
+				letter-spacing: 0.05em;
+			}
+
+			.status-input {
+				height: 32px;
+				width: 100%;
+				padding: 0 var(--space-2);
+				border: 1px solid var(--slate-200);
+				border-radius: var(--radius-md);
+				font-size: var(--font-size-base);
+				text-align: center;
+				outline: none;
+				transition: var(--transition-fast);
+				background: var(--white);
+			}
+
+			.status-input:hover {
+				border-color: var(--slate-300);
+			}
+
+			.status-input:focus {
+				border-color: var(--blue-500);
+			}
+
+			.status-input:read-only {
+				background: var(--slate-50);
+				border-color: var(--slate-100);
+				color: var(--slate-600);
+			}
+
+			.status-sum {
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-800);
+				text-align: center;
+				font-size: var(--font-size-base);
+			}
+
+			.status-row-expandable {
+				display: contents;
+			}
+
+			.status-expand-btn {
+				width: 32px;
+				height: 32px;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				border: none;
+				background: transparent;
+				color: var(--slate-400);
+				border-radius: var(--radius-md);
+				cursor: pointer;
+				transition: var(--transition-fast);
+			}
+
+			.status-expand-btn:hover {
+				background: var(--slate-100);
+				color: var(--slate-600);
+			}
+
+			.status-expand-btn .icon {
+				width: 12px;
+				height: 12px;
+			}
+
+			.status-detail-row {
+				grid-column: 2 / 4;
+				display: flex;
+				flex-direction: row;
+				gap: var(--space-2);
+				padding-bottom: var(--space-2);
+			}
+
+			.status-detail-input {
+				flex: 1;
+				height: 28px;
+				padding: 0 var(--space-2);
+				border: 1px solid var(--slate-200);
+				border-radius: var(--radius-md);
+				font-size: var(--font-size-sm);
+				outline: none;
+				transition: var(--transition-fast);
+			}
+
+			.status-detail-input:focus {
+				border-color: var(--blue-500);
+			}
+
+			.status-detail-input::placeholder {
+				color: var(--slate-300);
+			}
+		</style>
+	}
+	<div class="status-panel">
+		<div class="status-header">
+			<h2 class="status-title">能力値</h2>
+			<div class="status-actions">
+				if !pc.IsReadOnly() {
+					@Button(ButtonGhostBlue, ButtonSizeDefault, templ.Attributes{"title": "ランダム"}) {
+						ランダム
+					}
+				}
+			</div>
+		</div>
+		<div class="status-grid">
+			for _, v := range variables {
+				@StatusRow(pc, v)
+			}
+		</div>
+	</div>
+}
+
+// StatusRow renders a single status variable row
+templ StatusRow(pc PageContext, v StatusVariable) {
+	<div class="status-key">{ v.Key }</div>
+	<input
+		type="number"
+		class="status-input"
+		value={ strconv.Itoa(v.Base) }
+		placeholder={ v.Key }
+		readonly?={ pc.IsReadOnly() }
+	/>
+	<div class="status-sum">{ strconv.Itoa(v.Sum()) }</div>
+}

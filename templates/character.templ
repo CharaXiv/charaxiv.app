@@ -2,6 +2,21 @@ package templates
 
 var sheetStyles = templ.NewOnceHandle()
 
+// sampleVariables returns sample CoC7 ability scores for demo purposes
+func sampleVariables() []StatusVariable {
+	return []StatusVariable{
+		{Key: "STR", Base: 50, Perm: 0, Temp: 0},
+		{Key: "CON", Base: 60, Perm: 0, Temp: 0},
+		{Key: "POW", Base: 55, Perm: 0, Temp: 0},
+		{Key: "DEX", Base: 65, Perm: 0, Temp: 0},
+		{Key: "APP", Base: 45, Perm: 0, Temp: 0},
+		{Key: "SIZ", Base: 70, Perm: 0, Temp: 0},
+		{Key: "INT", Base: 75, Perm: 0, Temp: 0},
+		{Key: "EDU", Base: 80, Perm: 0, Temp: 0},
+		{Key: "LUK", Base: 40, Perm: 0, Temp: 0},
+	}
+}
+
 templ CharacterSheet(pc PageContext) {
 	@Layout("Character", CharacterHeaderActions(pc), CharacterContent(pc))
 }
@@ -152,12 +167,9 @@ templ CharacterContent(pc PageContext) {
 			@ScenarioMemoGroup(pc)
 		</div>
 		<div class="sheet-right">
+			@StatusPanel(pc, sampleVariables())
 			<div class="panel">
-				<h2>Right-Left Panel</h2>
-				<p>Ability scores and parameters.</p>
-			</div>
-			<div class="panel">
-				<h2>Right-Right Panel</h2>
+				<h2>Skills</h2>
 				<p>Skills list.</p>
 			</div>
 		</div>
