@@ -8,14 +8,8 @@ templ Profile(pc PageContext) {
 			.profile {
 				display: flex;
 				flex-direction: column;
-				gap: var(--space-8);
-				background: var(--white);
-			}
-
-			.profile-top {
-				display: flex;
-				flex-direction: column;
 				gap: var(--space-4);
+				background: var(--white);
 			}
 
 			/* Image Gallery */
@@ -113,14 +107,16 @@ templ Profile(pc PageContext) {
 			.memo-group {
 				display: flex;
 				flex-direction: column;
-				gap: var(--space-8);
-				padding-bottom: var(--space-4);
+				gap: var(--space-4);
 			}
 
 			.memo-section {
 				display: flex;
 				flex-direction: column;
 				gap: var(--space-4);
+				background: var(--white);
+				border-radius: var(--radius-lg);
+				padding: var(--space-4);
 			}
 
 			.memo-header {
@@ -128,27 +124,23 @@ templ Profile(pc PageContext) {
 				flex-direction: row;
 				align-items: center;
 				justify-content: space-between;
-				padding-right: var(--space-2);
 			}
 
 			.memo-title {
-				font-size: var(--font-size-3xl);
-				font-weight: var(--font-weight-bold);
+				font-size: var(--font-size-xl);
+				font-weight: var(--font-weight-medium);
 				color: var(--slate-700);
-				padding-left: var(--space-4);
 			}
 		</style>
 	}
 	<section class="profile" aria-label="character-profile">
-		<div class="profile-top">
-			@ImageGallery(pc)
-			<div class="name-section">
-				<input type="text" class="name-input" placeholder="名前" value="" readonly?={ pc.IsReadOnly() }/>
-				<input type="text" class="ruby-input" placeholder="よみがな" value="" readonly?={ pc.IsReadOnly() }/>
-			</div>
+		@ImageGallery(pc)
+		<div class="name-section">
+			<input type="text" class="name-input" placeholder="名前" value="" readonly?={ pc.IsReadOnly() }/>
+			<input type="text" class="ruby-input" placeholder="よみがな" value="" readonly?={ pc.IsReadOnly() }/>
 		</div>
-		@MemoGroup(pc)
 	</section>
+	@MemoGroup(pc)
 }
 
 templ ImageGallery(pc PageContext) {
