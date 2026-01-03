@@ -6,6 +6,31 @@ func isDev() bool {
 	return os.Getenv("DEV") == "1"
 }
 
+templ layoutStyles() {
+	<style>
+		/* Mobile: padding at bottom for fixed header */
+		.header-padding-top {
+			display: none;
+		}
+		.header-padding-bottom {
+			height: 48px;
+			background: white;
+		}
+
+		/* Desktop: padding at top for sticky header */
+		@media (min-width: 640px) {
+			.header-padding-top {
+				display: block;
+				height: 48px;
+				background: white;
+			}
+			.header-padding-bottom {
+				display: none;
+			}
+		}
+	</style>
+}
+
 // Layout renders the base HTML structure.
 // headerActions: content for the header actions area (buttons)
 // content: main page content
@@ -20,6 +45,8 @@ templ Layout(title string, headerActions templ.Component, content templ.Componen
 		</head>
 		<body>
 			@DesignSystem()
+			@layoutStyles()
+			<div class="header-padding-top"></div>
 			@Header() {
 				if headerActions != nil {
 					@headerActions
@@ -28,6 +55,7 @@ templ Layout(title string, headerActions templ.Component, content templ.Componen
 			<main>
 				@content
 			</main>
+			<div class="header-padding-bottom"></div>
 			if isDev() {
 				@liveReloadScript()
 			}

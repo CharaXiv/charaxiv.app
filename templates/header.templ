@@ -7,19 +7,11 @@ var headerStyles = templ.NewOnceHandle()
 templ Header() {
 	@headerStyles.Once() {
 		<style>
-			.header-backdrop {
+			.header {
 				position: fixed;
-				top: 0;
+				bottom: 0;
 				left: 0;
 				right: 0;
-				height: 48px;
-				background: white;
-				z-index: 49;
-			}
-
-			.header {
-				position: sticky;
-				top: 0;
 				z-index: 50;
 				display: flex;
 				height: 48px;
@@ -28,9 +20,20 @@ templ Header() {
 				align-items: center;
 				justify-content: space-between;
 				padding: 0 var(--space-2);
-				background: rgba(249, 250, 251, 0.1);
+				background: rgba(255, 255, 255, 0.1);
 				backdrop-filter: blur(12px);
 				-webkit-backdrop-filter: blur(12px);
+			}
+
+			/* Desktop: sticky at top */
+			@media (min-width: 640px) {
+				.header {
+					position: sticky;
+					top: 0;
+					bottom: auto;
+					left: auto;
+					right: auto;
+				}
 			}
 
 			.header-logo {
@@ -74,7 +77,6 @@ templ Header() {
 			}
 		</style>
 	}
-	<div class="header-backdrop"></div>
 	<header class="header">
 		<a href="/" class="header-logo">
 			@IconLayerGroup()
