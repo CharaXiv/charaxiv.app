@@ -71,7 +71,13 @@ func sampleStatus() sampleStatusData {
 }
 
 templ CharacterSheet(pc PageContext) {
-	@Layout("Character", CharacterHeaderActions(pc), CharacterContent(pc))
+	{{ status := sampleStatus() }}
+	@CharacterSheetWithStatus(pc, status.Variables, status.Computed, status.Parameters, status.DamageBonus)
+}
+
+// CharacterSheetWithStatus renders the character sheet with provided status data
+templ CharacterSheetWithStatus(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
+	@Layout("Character", CharacterHeaderActions(pc), CharacterContentWithStatus(pc, variables, computed, parameters, damageBonus))
 }
 
 // CharacterHeaderActions renders the header buttons for the character sheet
@@ -132,8 +138,14 @@ templ PreviewModeFragments(pc PageContext) {
 	@CharacterHeaderActionsOOB(pc)
 }
 
-// CharacterContent renders the main character sheet content
+// CharacterContent renders the main character sheet content (uses sample data)
 templ CharacterContent(pc PageContext) {
+	{{ status := sampleStatus() }}
+	@CharacterContentWithStatus(pc, status.Variables, status.Computed, status.Parameters, status.DamageBonus)
+}
+
+// CharacterContentWithStatus renders the main character sheet content with provided status
+templ CharacterContentWithStatus(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
 	@sheetStyles.Once() {
 		<style>
 			.sheet {
@@ -220,8 +232,7 @@ templ CharacterContent(pc PageContext) {
 			@ScenarioMemoGroup(pc)
 		</div>
 		<div class="sheet-right">
-			{{ status := sampleStatus() }}
-			@StatusPanel(pc, status.Variables, status.Computed, status.Parameters, status.DamageBonus)
+			@StatusPanel(pc, variables, computed, parameters, damageBonus)
 			<div class="panel">
 				<h2>Skills</h2>
 				<p>Skills list.</p>

@@ -18,6 +18,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"charaxiv/models"
 	"charaxiv/storage"
 	"charaxiv/templates"
 )
@@ -28,6 +29,53 @@ func HTML(c func(r *http.Request) templ.Component) http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		c(r).Render(r.Context(), w)
 	}
+}
+
+// statusToTemplates converts model status to template types
+func statusToTemplates(status *models.Cthulhu6Status) ([]templates.StatusVariable, []templates.ComputedValue, []templates.StatusParameter, string) {
+	// Variables in display order
+	varOrder := []string{"STR", "CON", "POW", "DEX", "APP", "SIZ", "INT", "EDU"}
+	variables := make([]templates.StatusVariable, 0, len(varOrder))
+	for _, key := range varOrder {
+		v := status.Variables[key]
+		variables = append(variables, templates.StatusVariable{
+			Key:  key,
+			Base: v.Base,
+			Perm: v.Perm,
+			Temp: v.Temp,
+			Min:  v.Min,
+			Max:  v.Max,
+		})
+	}
+
+	// Computed values in display order
+	computedOrder := []string{"初期SAN", "アイデア", "幸運", "知識", "職業P", "興味P"}
+	computedMap := status.ComputedValues()
+	computed := make([]templates.ComputedValue, 0, len(computedOrder))
+	for _, key := range computedOrder {
+		computed = append(computed, templates.ComputedValue{
+			Key:   key,
+			Value: computedMap[key],
+		})
+	}
+
+	// Parameters
+	paramOrder := []string{"HP", "MP", "SAN"}
+	defaults := status.DefaultParameters()
+	parameters := make([]templates.StatusParameter, 0, len(paramOrder))
+	for _, key := range paramOrder {
+		var val *int
+		if v := status.Parameters[key]; v != nil {
+			val = v
+		}
+		parameters = append(parameters, templates.StatusParameter{
+			Key:          key,
+			Value:        val,
+			DefaultValue: defaults[key],
+		})
+	}
+
+	return variables, computed, parameters, status.DamageBonus()
 }
 
 // proxyWebSocket proxies a WebSocket connection to the target host.
@@ -85,6 +133,9 @@ func proxyWebSocket(w http.ResponseWriter, r *http.Request, targetHost string) {
 func main() {
 	// Dev mode: notify reloader when server is ready (after ListenAndServe starts)
 	devMode := os.Getenv("DEV") == "1"
+
+	// Initialize character store (in-memory for now)
+	charStore := models.NewStore()
 
 	// Initialize storage
 	var store storage.Storage
@@ -154,7 +205,9 @@ func main() {
 	// Character sheet
 	r.Get("/", HTML(func(r *http.Request) templ.Component {
 		ctx := templates.NewPageContext()
-		return templates.CharacterSheet(ctx)
+		status := charStore.GetStatus()
+		vars, computed, params, db := statusToTemplates(status)
+		return templates.CharacterSheetWithStatus(ctx, vars, computed, params, db)
 	}))
 
 	// Preview mode toggle - returns targeted fragments with OOB swaps
@@ -166,6 +219,29 @@ func main() {
 	r.Post("/api/preview/off", HTML(func(r *http.Request) templ.Component {
 		ctx := templates.PageContext{IsOwner: true, Preview: false}
 		return templates.PreviewModeFragments(ctx)
+	}))
+
+	// Status variable adjustment (e.g., STR, CON, etc.)
+	r.Post("/api/status/{key}/adjust", HTML(func(r *http.Request) templ.Component {
+		key := chi.URLParam(r, "key")
+		// Remove "status-" prefix if present
+		key = strings.TrimPrefix(key, "status-")
+
+		deltaStr := r.URL.Query().Get("delta")
+		delta := 0
+		fmt.Sscanf(deltaStr, "%d", &delta)
+
+		ctx := templates.NewPageContext()
+		updated := charStore.UpdateVariableBase(key, delta)
+		if updated == nil {
+			// Key not found, return empty
+			return templates.Empty()
+		}
+
+		// Return the full status panel (for now - could optimize to just return the row)
+		status := charStore.GetStatus()
+		vars, computed, params, db := statusToTemplates(status)
+		return templates.StatusPanelOOB(ctx, vars, computed, params, db)
 	}))
 
 	// Storage test endpoint

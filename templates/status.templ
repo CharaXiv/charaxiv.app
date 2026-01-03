@@ -42,6 +42,13 @@ func (p StatusParameter) EffectiveValue() int {
 
 // StatusPanel renders the ability scores panel
 templ StatusPanel(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
+	<div id="status-panel">
+		@StatusPanelContent(pc, variables, computed, parameters, damageBonus)
+	</div>
+}
+
+// StatusPanelContent renders the inner content of the status panel
+templ StatusPanelContent(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
 	@statusStyles.Once() {
 		<style>
 			.status-panel {
@@ -354,4 +361,15 @@ templ IndefiniteRow(parameters []StatusParameter) {
 	<div class="parameter-key">不定</div>
 	<div class="indefinite-value">{ strconv.Itoa(indefinite) }</div>
 	<div class="parameter-default"></div>
+}
+
+// StatusPanelOOB renders the status panel with OOB swap for HTMX updates
+templ StatusPanelOOB(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
+	<div id="status-panel" hx-swap-oob="true">
+		@StatusPanelContent(pc, variables, computed, parameters, damageBonus)
+	</div>
+}
+
+// Empty renders nothing (for error cases)
+templ Empty() {
 }
