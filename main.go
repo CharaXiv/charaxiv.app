@@ -244,6 +244,31 @@ func main() {
 		return templates.StatusPanelOOB(ctx, vars, computed, params, db)
 	}))
 
+	// Status variable set (direct value from input)
+	r.Post("/api/status/{key}/set", HTML(func(r *http.Request) templ.Component {
+		key := chi.URLParam(r, "key")
+		// Remove "status-" prefix if present
+		key = strings.TrimPrefix(key, "status-")
+
+		// Parse form value
+		r.ParseForm()
+		valueStr := r.FormValue("status_" + key)
+		value := 0
+		fmt.Sscanf(valueStr, "%d", &value)
+
+		ctx := templates.NewPageContext()
+		updated := charStore.SetVariableBase(key, value)
+		if updated == nil {
+			// Key not found, return empty
+			return templates.Empty()
+		}
+
+		// Return the full status panel
+		status := charStore.GetStatus()
+		vars, computed, params, db := statusToTemplates(status)
+		return templates.StatusPanelOOB(ctx, vars, computed, params, db)
+	}))
+
 	// Storage test endpoint
 	r.Get("/api/storage/test", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

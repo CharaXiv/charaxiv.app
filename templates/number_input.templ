@@ -110,6 +110,11 @@ templ NumberInput(cfg NumberInputConfig) {
 			min={ strconv.Itoa(cfg.Min) }
 			max={ strconv.Itoa(cfg.Max) }
 			readonly?={ cfg.Readonly }
+			if !cfg.Readonly {
+				hx-post={ fmt.Sprintf("/api/status/%s/set", cfg.ID) }
+				hx-trigger="change"
+				hx-include="this"
+			}
 		/>
 		<button
 			type="button"
