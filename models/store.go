@@ -6,12 +6,14 @@ import "sync"
 type Store struct {
 	mu     sync.RWMutex
 	status *Cthulhu6Status
+	memos  map[string]string
 }
 
 // NewStore creates a new store with default data
 func NewStore() *Store {
 	return &Store{
 		status: NewCthulhu6Status(),
+		memos:  make(map[string]string),
 	}
 }
 
@@ -91,4 +93,22 @@ func (s *Store) SetDamageBonus(db string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.status.DB = db
+}
+
+// GetMemo returns a memo by ID
+func (s *Store) GetMemo(id string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.memos[id]
+}
+
+// SetMemo sets a memo value, returns true if changed
+func (s *Store) SetMemo(id string, value string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.memos[id] == value {
+		return false
+	}
+	s.memos[id] = value
+	return true
 }

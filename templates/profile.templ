@@ -167,10 +167,10 @@ templ memoGroupContent(pc PageContext, oob bool) {
 		}
 	>
 		<div class="memo-section">
-			@MarkdownEditor("public-memo", "public_memo", "公開メモ", "公開メモを入力...", "", pc.IsReadOnly())
+			@MarkdownEditor("public-memo", "public-memo", "公開メモ", "公開メモを入力...", pc.GetMemo("public-memo"), pc.IsReadOnly())
 		</div>
 		<div class="memo-section">
-			@SecretMarkdownEditor("secret-memo", "secret_memo", "秘匿メモ", "秘匿メモを入力...", "", pc.IsReadOnly())
+			@SecretMarkdownEditor("secret-memo", "secret-memo", "秘匿メモ", "秘匿メモを入力...", pc.GetMemo("secret-memo"), pc.IsReadOnly())
 		</div>
 	</div>
 }
@@ -194,10 +194,10 @@ templ scenarioMemoGroupContent(pc PageContext, oob bool) {
 		}
 	>
 		<div class="memo-section">
-			@MarkdownEditor("scenario-public-memo", "scenario_public_memo", "シナリオ公開メモ", "シナリオ公開メモを入力...", "", pc.IsReadOnly())
+			@MarkdownEditor("scenario-public-memo", "scenario-public-memo", "シナリオ公開メモ", "シナリオ公開メモを入力...", pc.GetMemo("scenario-public-memo"), pc.IsReadOnly())
 		</div>
 		<div class="memo-section">
-			@SecretMarkdownEditor("scenario-secret-memo", "scenario_secret_memo", "シナリオ秘匿メモ", "シナリオ秘匿メモを入力...", "", pc.IsReadOnly())
+			@SecretMarkdownEditor("scenario-secret-memo", "scenario-secret-memo", "シナリオ秘匿メモ", "シナリオ秘匿メモを入力...", pc.GetMemo("scenario-secret-memo"), pc.IsReadOnly())
 		</div>
 	</div>
 }

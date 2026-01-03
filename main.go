@@ -31,6 +31,17 @@ func HTML(c func(r *http.Request) templ.Component) http.HandlerFunc {
 	}
 }
 
+// buildPageContext creates a PageContext with memos loaded from the store
+func buildPageContext(store *models.Store) templates.PageContext {
+	ctx := templates.NewPageContext()
+	// Load all memos
+	memoIDs := []string{"public-memo", "secret-memo", "scenario-public-memo", "scenario-secret-memo"}
+	for _, id := range memoIDs {
+		ctx.Memos[id] = store.GetMemo(id)
+	}
+	return ctx
+}
+
 // statusToTemplates converts model status to template types
 func statusToTemplates(status *models.Cthulhu6Status) ([]templates.StatusVariable, []templates.ComputedValue, []templates.StatusParameter, string) {
 	// Variables in display order
@@ -204,7 +215,7 @@ func main() {
 
 	// Character sheet
 	r.Get("/", HTML(func(r *http.Request) templ.Component {
-		ctx := templates.NewPageContext()
+		ctx := buildPageContext(charStore)
 		status := charStore.GetStatus()
 		vars, computed, params, db := statusToTemplates(status)
 		return templates.CharacterSheetWithStatus(ctx, vars, computed, params, db)
@@ -298,6 +309,25 @@ func main() {
 		vars, computed, params, db := statusToTemplates(status)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		templates.StatusPanelOOB(ctx, vars, computed, params, db).Render(r.Context(), w)
+	})
+
+	// Memo update endpoint
+	r.Post("/api/memo/{id}/set", func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+
+		// Parse form value
+		r.ParseForm()
+		value := r.FormValue(id)
+
+		// Update memo, return 204 if unchanged
+		if !charStore.SetMemo(id, value) {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Return 204 - memo saved, no content update needed
+		// (the editor already has the correct value)
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	// Storage test endpoint

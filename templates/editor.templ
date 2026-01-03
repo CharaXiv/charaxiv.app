@@ -377,6 +377,12 @@ templ MarkdownEditorEdit(id string, name string, placeholder string, value strin
 							toolbar: toolbar
 						});
 
+						// Sync EasyMDE changes to textarea and trigger input event for HTMX
+						mde.codemirror.on('change', function() {
+							textarea.value = mde.value();
+							textarea.dispatchEvent(new Event('input', { bubbles: true }));
+						});
+
 						// Replace button content with SVG for password button
 						if (isSecret) {
 							var btn = mde.toolbarElements['password'];
@@ -398,13 +404,16 @@ templ MarkdownEditorEdit(id string, name string, placeholder string, value strin
 			})();
 		</script>
 	}
-	<div class="markdown-editor-wrapper">
+	<div class="markdown-editor-wrapper" id={ id + "-wrapper" }>
 		<textarea
 			id={ id }
 			name={ name }
 			class="markdown-editor"
 			placeholder={ placeholder }
 			data-secret?={ secret }
+			hx-post={ "/api/memo/" + id + "/set" }
+			hx-trigger="input changed delay:3000ms from:closest .markdown-editor-wrapper"
+			hx-include="this"
 		>{ value }</textarea>
 	</div>
 }
