@@ -66,6 +66,24 @@ templ Header() {
 				height: 24px;
 			}
 
+			.header-logo .icon-spinner {
+				display: none;
+				animation: spin 1s linear infinite;
+			}
+
+			.header-logo.htmx-request .icon-logo {
+				display: none;
+			}
+
+			.header-logo.htmx-request .icon-spinner {
+				display: inline;
+			}
+
+			@keyframes spin {
+				from { transform: rotate(0deg); }
+				to { transform: rotate(360deg); }
+			}
+
 			.header-logo .logo-text {
 				display: none;
 				height: 16px;
@@ -87,8 +105,11 @@ templ Header() {
 		</style>
 	}
 	<header class="header at-top">
-		<a href="/" class="header-logo">
-			@icons.IconLayerGroup()
+		<a href="/" class="header-logo" id="header-logo">
+			<span class="icon-logo">
+				@icons.IconLayerGroup()
+			</span>
+			@icons.IconSpinner()
 			@icons.LogoCharaXiv()
 		</a>
 		<div class="header-actions">
@@ -98,8 +119,10 @@ templ Header() {
 	<script>
 		(function() {
 			const header = document.querySelector('.header');
+			const logo = document.getElementById('header-logo');
 			if (!header) return;
 			
+			// Scroll behavior
 			function updateHeader() {
 				if (window.scrollY <= 0) {
 					header.classList.add('at-top');
@@ -107,9 +130,24 @@ templ Header() {
 					header.classList.remove('at-top');
 				}
 			}
-			
 			window.addEventListener('scroll', updateHeader, { passive: true });
 			updateHeader();
+
+			// HTMX loading indicator
+			if (logo) {
+				let requestCount = 0;
+				document.body.addEventListener('htmx:beforeRequest', () => {
+					requestCount++;
+					logo.classList.add('htmx-request');
+				});
+				document.body.addEventListener('htmx:afterRequest', () => {
+					requestCount--;
+					if (requestCount <= 0) {
+						requestCount = 0;
+						logo.classList.remove('htmx-request');
+					}
+				});
+			}
 		})();
 	</script>
 }
