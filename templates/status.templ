@@ -10,6 +10,8 @@ type StatusVariable struct {
 	Base int
 	Perm int
 	Temp int
+	Min  int
+	Max  int
 }
 
 // Sum returns the total value of the variable
@@ -63,31 +65,20 @@ templ StatusPanel(pc PageContext, variables []StatusVariable) {
 				letter-spacing: 0.05em;
 			}
 
-			.status-input {
-				height: 32px;
+			.status-input-wrapper {
 				width: 100%;
-				padding: 0 var(--space-2);
 				border: 1px solid var(--slate-200);
 				border-radius: var(--radius-md);
-				font-size: var(--font-size-base);
-				text-align: center;
-				outline: none;
-				transition: var(--transition-fast);
 				background: var(--white);
+				transition: var(--transition-fast);
 			}
 
-			.status-input:hover {
+			.status-input-wrapper:hover {
 				border-color: var(--slate-300);
 			}
 
-			.status-input:focus {
+			.status-input-wrapper:focus-within {
 				border-color: var(--blue-500);
-			}
-
-			.status-input:read-only {
-				background: var(--slate-50);
-				border-color: var(--slate-100);
-				color: var(--slate-600);
 			}
 
 			.status-sum {
@@ -175,12 +166,16 @@ templ StatusPanel(pc PageContext, variables []StatusVariable) {
 // StatusRow renders a single status variable row
 templ StatusRow(pc PageContext, v StatusVariable) {
 	<div class="status-key">{ v.Key }</div>
-	<input
-		type="number"
-		class="status-input"
-		value={ strconv.Itoa(v.Base) }
-		placeholder={ v.Key }
-		readonly?={ pc.IsReadOnly() }
-	/>
+	<div class="status-input-wrapper">
+		@NumberInput(NumberInputConfig{
+			ID:          "status-" + v.Key,
+			Name:        "status_" + v.Key,
+			Value:       v.Base,
+			Min:         v.Min,
+			Max:         v.Max,
+			Placeholder: v.Key,
+			Readonly:    pc.IsReadOnly(),
+		})
+	</div>
 	<div class="status-sum">{ strconv.Itoa(v.Sum()) }</div>
 }

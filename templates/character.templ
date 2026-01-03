@@ -5,15 +5,15 @@ var sheetStyles = templ.NewOnceHandle()
 // sampleVariables returns sample CoC7 ability scores for demo purposes
 func sampleVariables() []StatusVariable {
 	return []StatusVariable{
-		{Key: "STR", Base: 50, Perm: 0, Temp: 0},
-		{Key: "CON", Base: 60, Perm: 0, Temp: 0},
-		{Key: "POW", Base: 55, Perm: 0, Temp: 0},
-		{Key: "DEX", Base: 65, Perm: 0, Temp: 0},
-		{Key: "APP", Base: 45, Perm: 0, Temp: 0},
-		{Key: "SIZ", Base: 70, Perm: 0, Temp: 0},
-		{Key: "INT", Base: 75, Perm: 0, Temp: 0},
-		{Key: "EDU", Base: 80, Perm: 0, Temp: 0},
-		{Key: "LUK", Base: 40, Perm: 0, Temp: 0},
+		{Key: "STR", Base: 50, Perm: 0, Temp: 0, Min: 15, Max: 90},
+		{Key: "CON", Base: 60, Perm: 0, Temp: 0, Min: 15, Max: 90},
+		{Key: "POW", Base: 55, Perm: 0, Temp: 0, Min: 15, Max: 90},
+		{Key: "DEX", Base: 65, Perm: 0, Temp: 0, Min: 15, Max: 90},
+		{Key: "APP", Base: 45, Perm: 0, Temp: 0, Min: 15, Max: 90},
+		{Key: "SIZ", Base: 70, Perm: 0, Temp: 0, Min: 40, Max: 90},
+		{Key: "INT", Base: 75, Perm: 0, Temp: 0, Min: 40, Max: 90},
+		{Key: "EDU", Base: 80, Perm: 0, Temp: 0, Min: 40, Max: 90},
+		{Key: "LUK", Base: 40, Perm: 0, Temp: 0, Min: 15, Max: 90},
 	}
 }
 

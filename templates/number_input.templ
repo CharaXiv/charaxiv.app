@@ -1,0 +1,137 @@
+package templates
+
+import "strconv"
+import "fmt"
+
+var numberInputStyles = templ.NewOnceHandle()
+
+// NumberInputConfig holds configuration for a number input
+type NumberInputConfig struct {
+	ID          string
+	Name        string
+	Value       int
+	Min         int
+	Max         int
+	Placeholder string
+	Readonly    bool
+}
+
+// NumberInput renders a number input with ±1 and ±5 buttons
+templ NumberInput(cfg NumberInputConfig) {
+	@numberInputStyles.Once() {
+		<style>
+			.number-input {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				height: 32px;
+				width: 100%;
+			}
+
+			.number-input-field {
+				flex: 1;
+				height: 100%;
+				min-width: 0;
+				padding: 0 var(--space-1);
+				border: none;
+				background: transparent;
+				font-size: var(--font-size-base);
+				font-weight: var(--font-weight-semibold);
+				text-align: center;
+				outline: none;
+			}
+
+			.number-input-field::placeholder {
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-300);
+			}
+
+			.number-input-btn {
+				flex-shrink: 0;
+				width: 28px;
+				height: 28px;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				border: none;
+				background: transparent;
+				color: var(--slate-400);
+				border-radius: var(--radius-sm);
+				cursor: pointer;
+				transition: var(--transition-fast);
+			}
+
+			.number-input-btn:hover:not(:disabled) {
+				background: var(--slate-100);
+				color: var(--slate-600);
+			}
+
+			.number-input-btn:disabled {
+				color: var(--slate-200);
+				cursor: not-allowed;
+			}
+
+			.number-input-btn .icon {
+				width: 12px;
+				height: 12px;
+			}
+		</style>
+	}
+	<div class="number-input" id={ cfg.ID + "-wrapper" }>
+		<button
+			type="button"
+			class="number-input-btn"
+			title="-5"
+			disabled?={ cfg.Readonly || cfg.Value <= cfg.Min }
+			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=-5", cfg.ID) }
+			hx-target={ "#" + cfg.ID + "-wrapper" }
+			hx-swap="outerHTML"
+		>
+			@IconAnglesLeft()
+		</button>
+		<button
+			type="button"
+			class="number-input-btn"
+			title="-1"
+			disabled?={ cfg.Readonly || cfg.Value <= cfg.Min }
+			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=-1", cfg.ID) }
+			hx-target={ "#" + cfg.ID + "-wrapper" }
+			hx-swap="outerHTML"
+		>
+			@IconAngleLeft()
+		</button>
+		<input
+			type="number"
+			class="number-input-field"
+			id={ cfg.ID }
+			name={ cfg.Name }
+			value={ strconv.Itoa(cfg.Value) }
+			placeholder={ cfg.Placeholder }
+			min={ strconv.Itoa(cfg.Min) }
+			max={ strconv.Itoa(cfg.Max) }
+			readonly?={ cfg.Readonly }
+		/>
+		<button
+			type="button"
+			class="number-input-btn"
+			title="+1"
+			disabled?={ cfg.Readonly || cfg.Value >= cfg.Max }
+			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=1", cfg.ID) }
+			hx-target={ "#" + cfg.ID + "-wrapper" }
+			hx-swap="outerHTML"
+		>
+			@IconAngleRight()
+		</button>
+		<button
+			type="button"
+			class="number-input-btn"
+			title="+5"
+			disabled?={ cfg.Readonly || cfg.Value >= cfg.Max }
+			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=5", cfg.ID) }
+			hx-target={ "#" + cfg.ID + "-wrapper" }
+			hx-swap="outerHTML"
+		>
+			@IconAnglesRight()
+		</button>
+	</div>
+}
