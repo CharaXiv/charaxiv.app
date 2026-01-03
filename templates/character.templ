@@ -2,17 +2,71 @@ package templates
 
 var sheetStyles = templ.NewOnceHandle()
 
-// sampleVariables returns sample CoC6 ability scores for demo purposes
-func sampleVariables() []StatusVariable {
-	return []StatusVariable{
-		{Key: "STR", Base: 10, Perm: 0, Temp: 0, Min: 3, Max: 18},
-		{Key: "CON", Base: 12, Perm: 0, Temp: 0, Min: 3, Max: 18},
-		{Key: "POW", Base: 11, Perm: 0, Temp: 0, Min: 3, Max: 18},
-		{Key: "DEX", Base: 13, Perm: 0, Temp: 0, Min: 3, Max: 18},
-		{Key: "APP", Base: 9, Perm: 0, Temp: 0, Min: 3, Max: 18},
-		{Key: "SIZ", Base: 14, Perm: 0, Temp: 0, Min: 8, Max: 18},
-		{Key: "INT", Base: 15, Perm: 0, Temp: 0, Min: 8, Max: 18},
-		{Key: "EDU", Base: 16, Perm: 0, Temp: 0, Min: 6, Max: 21},
+// Sample data for CoC6 character sheet demo
+type sampleStatusData struct {
+	Variables   []StatusVariable
+	Computed    []ComputedValue
+	Parameters  []StatusParameter
+	DamageBonus string
+}
+
+func sampleStatus() sampleStatusData {
+	// Sample ability scores
+	str, con, pow, dex, app, siz, inT, edu := 10, 12, 11, 13, 9, 14, 15, 16
+
+	variables := []StatusVariable{
+		{Key: "STR", Base: str, Perm: 0, Temp: 0, Min: 3, Max: 18},
+		{Key: "CON", Base: con, Perm: 0, Temp: 0, Min: 3, Max: 18},
+		{Key: "POW", Base: pow, Perm: 0, Temp: 0, Min: 3, Max: 18},
+		{Key: "DEX", Base: dex, Perm: 0, Temp: 0, Min: 3, Max: 18},
+		{Key: "APP", Base: app, Perm: 0, Temp: 0, Min: 3, Max: 18},
+		{Key: "SIZ", Base: siz, Perm: 0, Temp: 0, Min: 8, Max: 18},
+		{Key: "INT", Base: inT, Perm: 0, Temp: 0, Min: 8, Max: 18},
+		{Key: "EDU", Base: edu, Perm: 0, Temp: 0, Min: 6, Max: 21},
+	}
+
+	// Computed values from variables
+	computed := []ComputedValue{
+		{Key: "初期SAN", Value: pow * 5},
+		{Key: "アイデア", Value: inT * 5},
+		{Key: "幸運", Value: pow * 5},
+		{Key: "知識", Value: edu * 5},
+		{Key: "職業P", Value: edu * 20},
+		{Key: "興味P", Value: inT * 10},
+	}
+
+	// Parameters with defaults calculated from variables
+	hpDefault := (con + siz + 1) / 2 // ceil((CON+SIZ)/2)
+	mpDefault := pow
+	sanDefault := pow * 5
+
+	parameters := []StatusParameter{
+		{Key: "HP", Value: nil, DefaultValue: hpDefault},
+		{Key: "MP", Value: nil, DefaultValue: mpDefault},
+		{Key: "SAN", Value: nil, DefaultValue: sanDefault},
+	}
+
+	// Damage bonus based on STR+SIZ
+	strPlusSiz := str + siz
+	var damageBonus string
+	switch {
+	case strPlusSiz < 13:
+		damageBonus = "-1d6"
+	case strPlusSiz < 17:
+		damageBonus = "-1d4"
+	case strPlusSiz < 25:
+		damageBonus = "+0"
+	case strPlusSiz < 33:
+		damageBonus = "+1d4"
+	default:
+		damageBonus = "+1d6" // simplified
+	}
+
+	return sampleStatusData{
+		Variables:   variables,
+		Computed:    computed,
+		Parameters:  parameters,
+		DamageBonus: damageBonus,
 	}
 }
 
@@ -166,7 +220,8 @@ templ CharacterContent(pc PageContext) {
 			@ScenarioMemoGroup(pc)
 		</div>
 		<div class="sheet-right">
-			@StatusPanel(pc, sampleVariables())
+			{{ status := sampleStatus() }}
+			@StatusPanel(pc, status.Variables, status.Computed, status.Parameters, status.DamageBonus)
 			<div class="panel">
 				<h2>Skills</h2>
 				<p>Skills list.</p>

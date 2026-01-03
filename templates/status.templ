@@ -19,8 +19,29 @@ func (v StatusVariable) Sum() int {
 	return v.Base + v.Perm + v.Temp
 }
 
+// ComputedValue represents a derived value calculated from variables
+type ComputedValue struct {
+	Key   string
+	Value int
+}
+
+// StatusParameter represents an editable parameter with a default value
+type StatusParameter struct {
+	Key          string
+	Value        *int // nil means use default
+	DefaultValue int
+}
+
+// EffectiveValue returns the value or default if nil
+func (p StatusParameter) EffectiveValue() int {
+	if p.Value != nil {
+		return *p.Value
+	}
+	return p.DefaultValue
+}
+
 // StatusPanel renders the ability scores panel
-templ StatusPanel(pc PageContext, variables []StatusVariable) {
+templ StatusPanel(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
 	@statusStyles.Once() {
 		<style>
 			.status-panel {
@@ -142,6 +163,122 @@ templ StatusPanel(pc PageContext, variables []StatusVariable) {
 			.status-detail-input::placeholder {
 				color: var(--slate-300);
 			}
+
+			/* Computed values grid */
+			.computed-grid {
+				display: grid;
+				grid-template-columns: repeat(2, 1fr 48px);
+				gap: var(--space-2);
+				align-items: center;
+			}
+
+			.computed-key {
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-600);
+				font-size: var(--font-size-sm);
+				text-align: right;
+				padding-right: var(--space-2);
+			}
+
+			.computed-value {
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-800);
+				text-align: center;
+			}
+
+			/* Damage bonus row */
+			.damage-bonus-row {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: flex-end;
+				gap: var(--space-2);
+			}
+
+			.damage-bonus-label {
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-600);
+				font-size: var(--font-size-sm);
+			}
+
+			.damage-bonus-value {
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-800);
+				width: 48px;
+				text-align: center;
+			}
+
+			/* Section divider */
+			.status-divider {
+				height: 1px;
+				background: var(--slate-200);
+				margin: var(--space-2) 0;
+			}
+
+			/* Parameters section */
+			.parameters-title {
+				font-size: var(--font-size-xl);
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-800);
+				margin-bottom: var(--space-2);
+			}
+
+			.parameters-grid {
+				display: grid;
+				grid-template-columns: 48px 1fr 40px;
+				gap: var(--space-2);
+				align-items: center;
+			}
+
+			.parameter-key {
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-700);
+				font-size: var(--font-size-sm);
+			}
+
+			.parameter-default {
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-400);
+				text-align: center;
+				font-size: var(--font-size-sm);
+			}
+
+			/* Damage bonus input */
+			.db-input-wrapper {
+				width: 100%;
+			}
+
+			.db-input {
+				width: 100%;
+				height: 32px;
+				padding: 0 var(--space-2);
+				border: 1px solid var(--slate-200);
+				border-radius: var(--radius-md);
+				font-size: var(--font-size-base);
+				font-weight: var(--font-weight-semibold);
+				text-align: center;
+				outline: none;
+				transition: var(--transition-fast);
+			}
+
+			.db-input:focus {
+				border-color: var(--blue-500);
+			}
+
+			.db-input::placeholder {
+				color: var(--slate-400);
+				font-weight: var(--font-weight-semibold);
+			}
+
+			/* Indefinite value (read-only) */
+			.indefinite-value {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				height: 32px;
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-800);
+			}
 		</style>
 	}
 	<div class="status-panel">
@@ -159,6 +296,21 @@ templ StatusPanel(pc PageContext, variables []StatusVariable) {
 			for _, v := range variables {
 				@StatusRow(pc, v)
 			}
+		</div>
+		<div class="computed-grid">
+			for _, c := range computed {
+				<div class="computed-key">{ c.Key }</div>
+				<div class="computed-value">{ strconv.Itoa(c.Value) }</div>
+			}
+		</div>
+		<div class="status-divider"></div>
+		<h2 class="parameters-title">パラメーター</h2>
+		<div class="parameters-grid">
+			for _, p := range parameters {
+				@ParameterRow(pc, p)
+			}
+			@DamageBonusRow(pc, damageBonus)
+			@IndefiniteRow(parameters)
 		</div>
 	</div>
 }
@@ -178,4 +330,52 @@ templ StatusRow(pc PageContext, v StatusVariable) {
 		})
 	</div>
 	<div class="status-sum">{ strconv.Itoa(v.Sum()) }</div>
+}
+
+// ParameterRow renders a single parameter row with editable value and default
+templ ParameterRow(pc PageContext, p StatusParameter) {
+	<div class="parameter-key">{ p.Key }</div>
+	<div class="status-input-wrapper">
+		@NumberInput(NumberInputConfig{
+			ID:          "param-" + p.Key,
+			Name:        "param_" + p.Key,
+			Value:       p.EffectiveValue(),
+			Placeholder: strconv.Itoa(p.DefaultValue),
+			Readonly:    pc.IsReadOnly(),
+		})
+	</div>
+	<div class="parameter-default">{ strconv.Itoa(p.DefaultValue) }</div>
+}
+
+// DamageBonusRow renders the damage bonus row with text input
+templ DamageBonusRow(pc PageContext, damageBonus string) {
+	<div class="parameter-key">DB</div>
+	<div class="db-input-wrapper">
+		<input
+			type="text"
+			class="db-input"
+			name="param_db"
+			value={ damageBonus }
+			placeholder={ damageBonus }
+			if pc.IsReadOnly() {
+				readonly
+			}
+		/>
+	</div>
+	<div class="parameter-default"></div>
+}
+
+// IndefiniteRow renders the indefinite insanity threshold (calculated from SAN)
+templ IndefiniteRow(parameters []StatusParameter) {
+	// Find SAN parameter to calculate indefinite threshold
+	{{ var sanValue int }}
+	for _, p := range parameters {
+		if p.Key == "SAN" {
+			{{ sanValue = p.EffectiveValue() }}
+		}
+	}
+	{{ indefinite := (sanValue * 4) / 5 }}
+	<div class="parameter-key">不定</div>
+	<div class="indefinite-value">{ strconv.Itoa(indefinite) }</div>
+	<div class="parameter-default"></div>
 }
