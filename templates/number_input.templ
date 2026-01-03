@@ -195,3 +195,80 @@ templ TextInput(cfg TextInputConfig) {
 		}
 	/>
 }
+
+// ProfileInputSize represents the size variant for profile inputs
+type ProfileInputSize string
+
+const (
+	ProfileInputName ProfileInputSize = "name"
+	ProfileInputRuby ProfileInputSize = "ruby"
+)
+
+// ProfileInputConfig holds configuration for a profile text input
+type ProfileInputConfig struct {
+	ID          string
+	Name        string
+	Value       string
+	Placeholder string
+	Readonly    bool
+	Size        ProfileInputSize
+}
+
+var profileInputStyles = templ.NewOnceHandle()
+
+// ProfileInput renders an inline-editable profile text input (for name/ruby)
+templ ProfileInput(cfg ProfileInputConfig) {
+	@profileInputStyles.Once() {
+		<style>
+			.profile-input {
+				width: 100%;
+				border: none;
+				outline: none;
+				background: transparent;
+				border-radius: var(--radius-md);
+				transition: background var(--transition-fast);
+			}
+
+			.profile-input:hover:not(:read-only) {
+				background: var(--slate-100);
+			}
+
+			.profile-input--name {
+				height: 40px;
+				font-size: var(--font-size-4xl);
+				font-weight: var(--font-weight-semibold);
+				line-height: 40px;
+				color: var(--blue-600);
+			}
+
+			.profile-input--name::placeholder {
+				font-size: var(--font-size-4xl);
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-300);
+			}
+
+			.profile-input--ruby {
+				height: 28px;
+				font-size: var(--font-size-lg);
+				line-height: 28px;
+				color: var(--slate-500);
+			}
+
+			.profile-input--ruby::placeholder {
+				font-size: var(--font-size-lg);
+				color: var(--slate-300);
+			}
+		</style>
+	}
+	<input
+		type="text"
+		class={ "profile-input", "profile-input--" + string(cfg.Size) }
+		id={ cfg.ID }
+		name={ cfg.Name }
+		value={ cfg.Value }
+		placeholder={ cfg.Placeholder }
+		if cfg.Readonly {
+			readonly
+		}
+	/>
+}

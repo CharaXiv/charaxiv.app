@@ -75,50 +75,6 @@ templ Profile(pc PageContext) {
 				padding: var(--space-3) var(--space-4);
 			}
 
-			.name-input {
-				height: 40px;
-				width: 100%;
-				font-size: var(--font-size-4xl);
-				font-weight: var(--font-weight-semibold);
-				line-height: 40px;
-				border: none;
-				outline: none;
-				background: transparent;
-				border-radius: var(--radius-md);
-				transition: background var(--transition-fast);
-			}
-
-			.name-input:hover {
-				background: var(--slate-100);
-			}
-
-			.name-input::placeholder {
-				font-size: var(--font-size-4xl);
-				font-weight: var(--font-weight-semibold);
-				color: var(--slate-300);
-			}
-
-			.ruby-input {
-				height: 28px;
-				width: 100%;
-				font-size: var(--font-size-lg);
-				line-height: 28px;
-				border: none;
-				outline: none;
-				background: transparent;
-				border-radius: var(--radius-md);
-				transition: background var(--transition-fast);
-			}
-
-			.ruby-input:hover {
-				background: var(--slate-100);
-			}
-
-			.ruby-input::placeholder {
-				font-size: var(--font-size-lg);
-				color: var(--slate-300);
-			}
-
 			/* Memo Sections */
 			.memo-group {
 				display: flex;
@@ -135,8 +91,22 @@ templ Profile(pc PageContext) {
 	@ImageGallery(pc)
 	<section class="profile" aria-label="character-profile">
 		<div class="name-section">
-			<input type="text" class="name-input" placeholder="名前" value="" readonly?={ pc.IsReadOnly() }/>
-			<input type="text" class="ruby-input" placeholder="よみがな" value="" readonly?={ pc.IsReadOnly() }/>
+			@ProfileInput(ProfileInputConfig{
+				ID:          "profile-name",
+				Name:        "profile_name",
+				Value:       "",
+				Placeholder: "名前",
+				Readonly:    pc.IsReadOnly(),
+				Size:        ProfileInputName,
+			})
+			@ProfileInput(ProfileInputConfig{
+				ID:          "profile-ruby",
+				Name:        "profile_ruby",
+				Value:       "",
+				Placeholder: "よみがな",
+				Readonly:    pc.IsReadOnly(),
+				Size:        ProfileInputRuby,
+			})
 		</div>
 	</section>
 	@MemoGroup(pc)
