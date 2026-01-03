@@ -63,8 +63,22 @@ The `~/LegacyCharaXiv` directory contains the previous SvelteKit/Firebase implem
 
 ## Development
 
+The dev server runs as a systemd service with auto-restart:
+
+```bash
+# Check status
+sudo systemctl status charaxiv-dev
+
+# Restart (after config changes)
+sudo systemctl restart charaxiv-dev
+
+# View logs
+journalctl -u charaxiv-dev -f
+```
+
+The service handles hot reload automatically - just edit files and the browser will refresh.
+
 See `README.md` for:
-- Dev server setup and hot reload
 - Build commands
 - Infrastructure (Terraform, GCS, Cloud Run)
 - Design system tokens (colors, spacing, typography)

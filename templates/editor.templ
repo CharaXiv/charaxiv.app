@@ -7,22 +7,37 @@ var markdownScript = templ.NewOnceHandle()
 
 // MarkdownEditor renders a textarea that will be enhanced with EasyMDE (edit mode)
 // or rendered markdown content (readonly mode)
-templ MarkdownEditor(id string, name string, placeholder string, value string, readonly bool) {
+templ MarkdownEditor(id string, name string, title string, placeholder string, value string, readonly bool) {
 	if readonly {
-		@MarkdownRenderer(value)
+		@MarkdownRenderer(title, value)
 	} else {
 		@MarkdownEditorEdit(id, name, placeholder, value)
 	}
 }
 
-// MarkdownRenderer renders markdown content as HTML
-templ MarkdownRenderer(content string) {
+// MarkdownRenderer renders markdown content as HTML with a title
+templ MarkdownRenderer(title string, content string) {
 	@markdownStyles.Once() {
 		<style>
+			.markdown-renderer {
+				background: var(--white);
+				border-radius: var(--radius-lg);
+				overflow: hidden;
+			}
+
+			.markdown-renderer-title {
+				font-size: var(--font-size-xl);
+				font-weight: var(--font-weight-medium);
+				color: var(--slate-500);
+				padding: var(--space-3) var(--space-4);
+				background: var(--slate-50);
+				border-bottom: 1px solid var(--slate-200);
+			}
+
 			.markdown-content {
-				min-height: 150px;
+				min-height: 100px;
 				width: 100%;
-				padding: var(--space-3);
+				padding: var(--space-3) var(--space-4);
 				font-size: var(--font-size-base);
 				line-height: 1.6;
 			}
@@ -147,7 +162,10 @@ templ MarkdownRenderer(content string) {
 			})();
 		</script>
 	}
-	<div class="markdown-content" data-markdown={ content }></div>
+	<div class="markdown-renderer">
+		<div class="markdown-renderer-title">{ title }</div>
+		<div class="markdown-content" data-markdown={ content }></div>
+	</div>
 }
 
 // MarkdownEditorEdit renders the EasyMDE editor

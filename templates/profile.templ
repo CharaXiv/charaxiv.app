@@ -129,23 +129,6 @@ templ Profile(pc PageContext) {
 			.memo-section {
 				display: flex;
 				flex-direction: column;
-				gap: var(--space-2);
-			}
-
-			.memo-header {
-				display: flex;
-				flex-direction: row;
-				align-items: center;
-				justify-content: space-between;
-				background: var(--white);
-				border-radius: var(--radius-lg);
-				padding: var(--space-2) var(--space-4);
-			}
-
-			.memo-title {
-				font-size: var(--font-size-3xl);
-				font-weight: var(--font-weight-bold);
-				color: var(--slate-700);
 			}
 		</style>
 	}
@@ -208,16 +191,10 @@ templ MemoGroupOOB(pc PageContext) {
 templ memoGroupContent(pc PageContext, oob bool) {
 	<div id="memo-group" class="memo-group" hx-swap-oob?={ oob }>
 		<div class="memo-section">
-			<div class="memo-header">
-				<h2 class="memo-title">公開メモ</h2>
-			</div>
-			@MarkdownEditor("public-memo", "public_memo", "公開メモを入力...", "", pc.IsReadOnly())
+			@MarkdownEditor("public-memo", "public_memo", "公開メモ", "公開メモを入力...", "", pc.IsReadOnly())
 		</div>
 		<div class="memo-section">
-			<div class="memo-header">
-				<h2 class="memo-title">秘匿メモ</h2>
-			</div>
-			@MarkdownEditor("secret-memo", "secret_memo", "秘匿メモを入力...", "", pc.IsReadOnly())
+			@MarkdownEditor("secret-memo", "secret_memo", "秘匿メモ", "秘匿メモを入力...", "", pc.IsReadOnly())
 		</div>
 	</div>
 }
