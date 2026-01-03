@@ -43,18 +43,46 @@ templ liveReloadScript() {
 		(function() {
 			const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
 			const wsUrl = protocol + '//' + location.host + '/dev/subscribe';
-			console.log('[LiveReload] Connecting to', wsUrl);
-			const ws = new WebSocket(wsUrl);
-			ws.onmessage = function(event) {
-				if (event.data === 'reload') {
-					console.log('[LiveReload] Reloading...');
-					location.reload();
-				}
-			};
-			ws.onclose = function() {
-				console.log('[LiveReload] Connection closed, reconnecting...');
-				setTimeout(function() { location.reload(); }, 1000);
-			};
+			let connected = false;
+			let reloadPending = false;
+
+			function connect() {
+				console.log('[LiveReload] Connecting to', wsUrl);
+				const ws = new WebSocket(wsUrl);
+				
+				ws.onopen = function() {
+					console.log('[LiveReload] Connected');
+					connected = true;
+					// If we reconnected after server restart, reload the page
+					if (reloadPending) {
+						console.log('[LiveReload] Server back up, reloading...');
+						location.reload();
+					}
+				};
+				
+				ws.onmessage = function(event) {
+					if (event.data === 'reload') {
+						console.log('[LiveReload] Reload signal received');
+						location.reload();
+					}
+				};
+				
+				ws.onclose = function() {
+					if (connected) {
+						console.log('[LiveReload] Connection lost, waiting for server...');
+						connected = false;
+						reloadPending = true;
+					}
+					// Try to reconnect after a delay
+					setTimeout(connect, 1000);
+				};
+				
+				ws.onerror = function() {
+					// Error will trigger onclose
+				};
+			}
+			
+			connect();
 		})();
 	</script>
 }

@@ -215,12 +215,13 @@ func main() {
 	log.Printf("Starting server on :%s", port)
 
 	if devMode {
-		// Use a listener so we can notify reloader after actually listening
+		// Use a listener so we can trigger reload AFTER server starts listening
 		ln, err := net.Listen("tcp", ":"+port)
 		if err != nil {
 			log.Fatal(err)
 		}
-		// Notify reloader now that we're listening
+		log.Printf("Server listening, triggering reload...")
+		// Now trigger reload - server is definitely listening
 		go http.Get("http://localhost:8001/reload")
 		log.Fatal(http.Serve(ln, r))
 	} else {
