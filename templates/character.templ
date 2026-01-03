@@ -38,7 +38,7 @@ templ PreviewToggle(pc PageContext) {
 				"id":        "preview-toggle",
 				"title":     "Exit preview mode",
 				"hx-post":   "/api/preview/off",
-				"hx-target": "#scenario-memo-group",
+				"hx-target": "#memo-group",
 				"hx-swap":   "outerHTML",
 			}) {
 				@IconEye()
@@ -48,7 +48,7 @@ templ PreviewToggle(pc PageContext) {
 				"id":        "preview-toggle",
 				"title":     "Preview as visitor",
 				"hx-post":   "/api/preview/on",
-				"hx-target": "#scenario-memo-group",
+				"hx-target": "#memo-group",
 				"hx-swap":   "outerHTML",
 			}) {
 				@IconEye()
@@ -59,7 +59,8 @@ templ PreviewToggle(pc PageContext) {
 
 // PreviewModeFragments returns the fragments needed for preview mode toggle
 templ PreviewModeFragments(pc PageContext) {
-	@ScenarioMemoGroup(pc)
+	@MemoGroup(pc)
+	@ScenarioMemoGroupOOB(pc)
 	@CharacterHeaderActionsOOB(pc)
 }
 

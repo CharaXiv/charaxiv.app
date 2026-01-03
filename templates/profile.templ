@@ -139,6 +139,7 @@ templ Profile(pc PageContext) {
 			<input type="text" class="ruby-input" placeholder="よみがな" value="" readonly?={ pc.IsReadOnly() }/>
 		</div>
 	</section>
+	@MemoGroup(pc)
 }
 
 templ ImageGallery(pc PageContext) {
