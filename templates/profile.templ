@@ -139,7 +139,6 @@ templ Profile(pc PageContext) {
 			<input type="text" class="ruby-input" placeholder="よみがな" value="" readonly?={ pc.IsReadOnly() }/>
 		</div>
 	</section>
-	@MemoGroup(pc)
 }
 
 templ ImageGallery(pc PageContext) {
@@ -195,6 +194,27 @@ templ memoGroupContent(pc PageContext, oob bool) {
 		</div>
 		<div class="memo-section">
 			@SecretMarkdownEditor("secret-memo", "secret_memo", "秘匿メモ", "秘匿メモを入力...", "", pc.IsReadOnly())
+		</div>
+	</div>
+}
+
+// ScenarioMemoGroup renders the scenario-specific memos for sheet pages
+templ ScenarioMemoGroup(pc PageContext) {
+	@scenarioMemoGroupContent(pc, false)
+}
+
+// ScenarioMemoGroupOOB returns ScenarioMemoGroup with OOB swap attribute
+templ ScenarioMemoGroupOOB(pc PageContext) {
+	@scenarioMemoGroupContent(pc, true)
+}
+
+templ scenarioMemoGroupContent(pc PageContext, oob bool) {
+	<div id="scenario-memo-group" class="memo-group" hx-swap-oob?={ oob }>
+		<div class="memo-section">
+			@MarkdownEditor("scenario-public-memo", "scenario_public_memo", "シナリオ公開メモ", "シナリオ公開メモを入力...", "", pc.IsReadOnly())
+		</div>
+		<div class="memo-section">
+			@SecretMarkdownEditor("scenario-secret-memo", "scenario_secret_memo", "シナリオ秘匿メモ", "シナリオ秘匿メモを入力...", "", pc.IsReadOnly())
 		</div>
 	</div>
 }
