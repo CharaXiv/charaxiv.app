@@ -53,33 +53,13 @@ func reloader(wg *sync.WaitGroup, sigCh <-chan os.Signal) {
 	})
 
 	mux.HandleFunc("/reload", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("%s[RELOADER] Reload triggered...%s\n", colorBlue, colorReset)
-
-		client := http.Client{Timeout: 1 * time.Second}
-		ticker := time.NewTicker(100 * time.Millisecond)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				resp, err := client.Get("http://localhost:8000/health")
-				if err != nil {
-					continue
-				}
-				resp.Body.Close()
-
-				if resp.StatusCode == 200 {
-					fmt.Printf("%s[RELOADER] Server is ready, triggering reload...%s\n", colorBlue, colorReset)
-					mu.Lock()
-					for _, target := range targets {
-						target <- true
-					}
-					mu.Unlock()
-					w.WriteHeader(http.StatusOK)
-					return
-				}
-			}
+		fmt.Printf("%s[RELOADER] Server is ready, notifying browsers...%s\n", colorBlue, colorReset)
+		mu.Lock()
+		for _, target := range targets {
+			target <- true
 		}
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
 	})
 
 	server := &http.Server{Addr: ":8001", Handler: mux}
