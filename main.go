@@ -245,7 +245,7 @@ func main() {
 	}))
 
 	// Status variable set (direct value from input)
-	r.Post("/api/status/{key}/set", HTML(func(r *http.Request) templ.Component {
+	r.Post("/api/status/{key}/set", func(w http.ResponseWriter, r *http.Request) {
 		key := chi.URLParam(r, "key")
 		// Remove "status-" prefix if present
 		key = strings.TrimPrefix(key, "status-")
@@ -253,21 +253,52 @@ func main() {
 		// Parse form value
 		r.ParseForm()
 		valueStr := r.FormValue("status_" + key)
-		value := 0
-		fmt.Sscanf(valueStr, "%d", &value)
+		if valueStr == "" {
+			// Empty input, no update needed
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 
-		ctx := templates.NewPageContext()
+		var value int
+		_, err := fmt.Sscanf(valueStr, "%d", &value)
+		if err != nil {
+			// Invalid number, no update needed
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Check if value actually changed
+		status := charStore.GetStatus()
+		if v, ok := status.Variables[key]; ok {
+			// Clamp to bounds for comparison
+			clampedValue := value
+			if clampedValue < v.Min {
+				clampedValue = v.Min
+			}
+			if clampedValue > v.Max {
+				clampedValue = v.Max
+			}
+			if v.Base == clampedValue {
+				// No change, no update needed
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+		}
+
 		updated := charStore.SetVariableBase(key, value)
 		if updated == nil {
-			// Key not found, return empty
-			return templates.Empty()
+			// Key not found
+			w.WriteHeader(http.StatusNoContent)
+			return
 		}
 
 		// Return the full status panel
-		status := charStore.GetStatus()
+		ctx := templates.NewPageContext()
+		status = charStore.GetStatus()
 		vars, computed, params, db := statusToTemplates(status)
-		return templates.StatusPanelOOB(ctx, vars, computed, params, db)
-	}))
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		templates.StatusPanelOOB(ctx, vars, computed, params, db).Render(r.Context(), w)
+	})
 
 	// Storage test endpoint
 	r.Get("/api/storage/test", func(w http.ResponseWriter, r *http.Request) {
