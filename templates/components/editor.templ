@@ -1,4 +1,6 @@
-package templates
+package components
+
+import "charaxiv/templates/icons"
 
 var editorStyles = templ.NewOnceHandle()
 var editorScript = templ.NewOnceHandle()
@@ -214,7 +216,7 @@ templ MarkdownRenderer(title string, content string, secret bool) {
 			<div class="markdown-renderer-title">{ title }</div>
 			if secret {
 				<button type="button" class="markdown-secret-toggle" title="秘匿メモを表示">
-					@IconEyeSlash()
+					@icons.IconEyeSlash()
 				</button>
 			}
 		</div>

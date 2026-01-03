@@ -1,6 +1,9 @@
-package templates
+package pages
 
-import "os"
+import (
+	"charaxiv/templates/components"
+	"os"
+)
 
 func isDev() bool {
 	return os.Getenv("DEV") == "1"
@@ -9,21 +12,13 @@ func isDev() bool {
 templ layoutStyles() {
 	<style>
 		/* Mobile: padding at bottom for fixed header */
-		.header-padding-top {
-			display: none;
-		}
 		.header-padding-bottom {
 			height: 48px;
 			background: white;
 		}
 
-		/* Desktop: padding at top for sticky header */
+		/* Desktop: no bottom padding needed (header is sticky) */
 		@media (min-width: 640px) {
-			.header-padding-top {
-				display: block;
-				height: 48px;
-				background: white;
-			}
 			.header-padding-bottom {
 				display: none;
 			}
@@ -44,10 +39,9 @@ templ Layout(title string, headerActions templ.Component, content templ.Componen
 			<script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
 		</head>
 		<body>
-			@DesignSystem()
+			@components.DesignSystem()
 			@layoutStyles()
-			<div class="header-padding-top"></div>
-			@Header() {
+			@components.Header() {
 				if headerActions != nil {
 					@headerActions
 				}

@@ -61,6 +61,26 @@ The `~/LegacyCharaXiv` directory contains the previous SvelteKit/Firebase implem
 - **Co-located styles**: CSS in templ files using `OnceHandle`
 - **OOB swaps**: For updating multiple page regions from one response
 
+## Templ Gotchas
+
+### Boolean vs Valued Attributes
+
+Templ's `attr?={ bool }` syntax renders a **boolean attribute** (present or absent, no value). This doesn't work for HTMX attributes that require explicit values.
+
+```go
+// WRONG: renders `hx-swap-oob` (no value) - HTMX ignores this
+<div hx-swap-oob?={ oob }>
+
+// CORRECT: renders `hx-swap-oob="true"` - HTMX processes this
+<div
+    if oob {
+        hx-swap-oob="true"
+    }
+>
+```
+
+Use the `if` block pattern for HTMX attributes like `hx-swap-oob`, `hx-boost`, etc.
+
 ## Development
 
 The dev server runs as a systemd service with auto-restart:

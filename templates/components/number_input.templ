@@ -1,7 +1,10 @@
-package templates
+package components
 
-import "strconv"
-import "fmt"
+import (
+	"charaxiv/templates/icons"
+	"fmt"
+	"strconv"
+)
 
 var numberInputStyles = templ.NewOnceHandle()
 
@@ -87,7 +90,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			hx-target={ "#" + cfg.ID + "-wrapper" }
 			hx-swap="outerHTML"
 		>
-			@IconAnglesLeft()
+			@icons.IconAnglesLeft()
 		</button>
 		<button
 			type="button"
@@ -98,7 +101,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			hx-target={ "#" + cfg.ID + "-wrapper" }
 			hx-swap="outerHTML"
 		>
-			@IconAngleLeft()
+			@icons.IconAngleLeft()
 		</button>
 		<input
 			type="number"
@@ -125,7 +128,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			hx-target={ "#" + cfg.ID + "-wrapper" }
 			hx-swap="outerHTML"
 		>
-			@IconAngleRight()
+			@icons.IconAngleRight()
 		</button>
 		<button
 			type="button"
@@ -136,7 +139,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			hx-target={ "#" + cfg.ID + "-wrapper" }
 			hx-swap="outerHTML"
 		>
-			@IconAnglesRight()
+			@icons.IconAnglesRight()
 		</button>
 	</div>
 }

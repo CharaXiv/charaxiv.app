@@ -1,4 +1,4 @@
-package templates
+package shared
 
 // PageContext holds rendering context for the character sheet
 type PageContext struct {

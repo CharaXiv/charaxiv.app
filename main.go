@@ -20,7 +20,9 @@ import (
 
 	"charaxiv/models"
 	"charaxiv/storage"
-	"charaxiv/templates"
+	"charaxiv/templates/components"
+	"charaxiv/templates/pages"
+	"charaxiv/templates/shared"
 )
 
 // HTML wraps a templ.Component handler, setting the Content-Type header.
@@ -32,8 +34,8 @@ func HTML(c func(r *http.Request) templ.Component) http.HandlerFunc {
 }
 
 // buildPageContext creates a PageContext with memos loaded from the store
-func buildPageContext(store *models.Store) templates.PageContext {
-	ctx := templates.NewPageContext()
+func buildPageContext(store *models.Store) shared.PageContext {
+	ctx := shared.NewPageContext()
 	// Load all memos
 	memoIDs := []string{"public-memo", "secret-memo", "scenario-public-memo", "scenario-secret-memo"}
 	for _, id := range memoIDs {
@@ -43,13 +45,13 @@ func buildPageContext(store *models.Store) templates.PageContext {
 }
 
 // statusToTemplates converts model status to template types
-func statusToTemplates(status *models.Cthulhu6Status) ([]templates.StatusVariable, []templates.ComputedValue, []templates.StatusParameter, string) {
+func statusToTemplates(status *models.Cthulhu6Status) ([]shared.StatusVariable, []shared.ComputedValue, []shared.StatusParameter, string) {
 	// Variables in display order
 	varOrder := []string{"STR", "CON", "POW", "DEX", "APP", "SIZ", "INT", "EDU"}
-	variables := make([]templates.StatusVariable, 0, len(varOrder))
+	variables := make([]shared.StatusVariable, 0, len(varOrder))
 	for _, key := range varOrder {
 		v := status.Variables[key]
-		variables = append(variables, templates.StatusVariable{
+		variables = append(variables, shared.StatusVariable{
 			Key:  key,
 			Base: v.Base,
 			Perm: v.Perm,
@@ -62,9 +64,9 @@ func statusToTemplates(status *models.Cthulhu6Status) ([]templates.StatusVariabl
 	// Computed values in display order
 	computedOrder := []string{"初期SAN", "アイデア", "幸運", "知識", "職業P", "興味P"}
 	computedMap := status.ComputedValues()
-	computed := make([]templates.ComputedValue, 0, len(computedOrder))
+	computed := make([]shared.ComputedValue, 0, len(computedOrder))
 	for _, key := range computedOrder {
-		computed = append(computed, templates.ComputedValue{
+		computed = append(computed, shared.ComputedValue{
 			Key:   key,
 			Value: computedMap[key],
 		})
@@ -73,13 +75,13 @@ func statusToTemplates(status *models.Cthulhu6Status) ([]templates.StatusVariabl
 	// Parameters
 	paramOrder := []string{"HP", "MP", "SAN"}
 	defaults := status.DefaultParameters()
-	parameters := make([]templates.StatusParameter, 0, len(paramOrder))
+	parameters := make([]shared.StatusParameter, 0, len(paramOrder))
 	for _, key := range paramOrder {
 		var val *int
 		if v := status.Parameters[key]; v != nil {
 			val = v
 		}
-		parameters = append(parameters, templates.StatusParameter{
+		parameters = append(parameters, shared.StatusParameter{
 			Key:          key,
 			Value:        val,
 			DefaultValue: defaults[key],
@@ -218,20 +220,20 @@ func main() {
 		ctx := buildPageContext(charStore)
 		status := charStore.GetStatus()
 		vars, computed, params, db := statusToTemplates(status)
-		return templates.CharacterSheetWithStatus(ctx, vars, computed, params, db)
+		return pages.CharacterSheet(ctx, vars, computed, params, db)
 	}))
 
 	// Preview mode toggle - returns targeted fragments with OOB swaps
 	r.Post("/api/preview/on", HTML(func(r *http.Request) templ.Component {
 		ctx := buildPageContext(charStore)
 		ctx.Preview = true
-		return templates.PreviewModeFragments(ctx)
+		return pages.PreviewModeFragments(ctx)
 	}))
 
 	r.Post("/api/preview/off", HTML(func(r *http.Request) templ.Component {
 		ctx := buildPageContext(charStore)
 		ctx.Preview = false
-		return templates.PreviewModeFragments(ctx)
+		return pages.PreviewModeFragments(ctx)
 	}))
 
 	// Status variable adjustment (e.g., STR, CON, etc.)
@@ -244,17 +246,17 @@ func main() {
 		delta := 0
 		fmt.Sscanf(deltaStr, "%d", &delta)
 
-		ctx := templates.NewPageContext()
+		ctx := shared.NewPageContext()
 		updated := charStore.UpdateVariableBase(key, delta)
 		if updated == nil {
 			// Key not found, return empty
-			return templates.Empty()
+			return shared.Empty()
 		}
 
 		// Return the full status panel (for now - could optimize to just return the row)
 		status := charStore.GetStatus()
 		vars, computed, params, db := statusToTemplates(status)
-		return templates.StatusPanelOOB(ctx, vars, computed, params, db)
+		return components.StatusPanel(ctx, vars, computed, params, db, true)
 	}))
 
 	// Status variable set (direct value from input)
@@ -306,11 +308,11 @@ func main() {
 		}
 
 		// Return the full status panel
-		ctx := templates.NewPageContext()
+		ctx := shared.NewPageContext()
 		status = charStore.GetStatus()
 		vars, computed, params, db := statusToTemplates(status)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		templates.StatusPanelOOB(ctx, vars, computed, params, db).Render(r.Context(), w)
+		components.StatusPanel(ctx, vars, computed, params, db, true).Render(r.Context(), w)
 	})
 
 	// Memo update endpoint

@@ -1,48 +1,22 @@
-package templates
+package components
 
-import "strconv"
+import (
+	"strconv"
+
+	. "charaxiv/templates/shared"
+)
 
 var statusStyles = templ.NewOnceHandle()
 
-// StatusVariable represents a single ability score with base, perm, and temp values
-type StatusVariable struct {
-	Key  string
-	Base int
-	Perm int
-	Temp int
-	Min  int
-	Max  int
-}
-
-// Sum returns the total value of the variable
-func (v StatusVariable) Sum() int {
-	return v.Base + v.Perm + v.Temp
-}
-
-// ComputedValue represents a derived value calculated from variables
-type ComputedValue struct {
-	Key   string
-	Value int
-}
-
-// StatusParameter represents an editable parameter with a default value
-type StatusParameter struct {
-	Key          string
-	Value        *int // nil means use default
-	DefaultValue int
-}
-
-// EffectiveValue returns the value or default if nil
-func (p StatusParameter) EffectiveValue() int {
-	if p.Value != nil {
-		return *p.Value
-	}
-	return p.DefaultValue
-}
-
-// StatusPanel renders the ability scores panel
-templ StatusPanel(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
-	<div id="status-panel">
+// StatusPanel renders the ability scores panel.
+// Set oob=true for out-of-band swaps.
+templ StatusPanel(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string, oob bool) {
+	<div
+		id="status-panel"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
 		@StatusPanelContent(pc, variables, computed, parameters, damageBonus)
 	</div>
 }
@@ -361,15 +335,4 @@ templ IndefiniteRow(parameters []StatusParameter) {
 	<div class="parameter-key">不定</div>
 	<div class="indefinite-value">{ strconv.Itoa(indefinite) }</div>
 	<div class="parameter-default"></div>
-}
-
-// StatusPanelOOB renders the status panel with OOB swap for HTMX updates
-templ StatusPanelOOB(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
-	<div id="status-panel" hx-swap-oob="true">
-		@StatusPanelContent(pc, variables, computed, parameters, damageBonus)
-	</div>
-}
-
-// Empty renders nothing (for error cases)
-templ Empty() {
 }

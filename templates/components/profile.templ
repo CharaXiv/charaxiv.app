@@ -1,4 +1,9 @@
-package templates
+package components
+
+import (
+	"charaxiv/templates/icons"
+	. "charaxiv/templates/shared"
+)
 
 var profileStyles = templ.NewOnceHandle()
 
@@ -109,56 +114,49 @@ templ Profile(pc PageContext) {
 			})
 		</div>
 	</section>
-	@MemoGroup(pc)
+	@MemoGroup(pc, false)
 }
 
 templ ImageGallery(pc PageContext) {
 	<div class="image-gallery">
 		<div class="image-display">
 			<div class="image-placeholder">
-				@IconImage()
+				@icons.IconImage()
 			</div>
 		</div>
 		<div class="image-controls">
 			@Button(ButtonSolidPlain, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "前の画像"}) {
-				@IconChevronLeft()
+				@icons.IconChevronLeft()
 			}
 			@Button(ButtonGhost, ButtonSizeDefault, templ.Attributes{"disabled": true, "class": "btn-gallery"}) {
 				画像一覧
 			}
 			if pc.IsOwner {
 				@Button(ButtonGhostRed, ButtonSizeIcon, templ.Attributes{"title": "画像を削除"}) {
-					@IconTrash()
+					@icons.IconTrash()
 				}
 				@Button(ButtonGhostBlue, ButtonSizeIcon, templ.Attributes{"title": "画像をアップロード"}) {
-					@IconArrowUpFromBracket()
+					@icons.IconArrowUpFromBracket()
 				}
 			}
 			@ButtonLink(ButtonGhostGreen, ButtonSizeIcon, templ.Attributes{"href": "#", "title": "画像をダウンロード"}) {
-				@IconDownload()
+				@icons.IconDownload()
 			}
 			if pc.IsOwner {
 				@Button(ButtonGhostOrange, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "画像をピン留め"}) {
-					@IconThumbtack()
+					@icons.IconThumbtack()
 				}
 			}
 			@Button(ButtonSolidPlain, ButtonSizeIcon, templ.Attributes{"disabled": true, "title": "次の画像"}) {
-				@IconChevronRight()
+				@icons.IconChevronRight()
 			}
 		</div>
 	</div>
 }
 
-templ MemoGroup(pc PageContext) {
-	@memoGroupContent(pc, false)
-}
-
-// MemoGroupOOB returns MemoGroup with OOB swap attribute
-templ MemoGroupOOB(pc PageContext) {
-	@memoGroupContent(pc, true)
-}
-
-templ memoGroupContent(pc PageContext, oob bool) {
+// MemoGroup renders the character-level memos.
+// Set oob=true for out-of-band swaps.
+templ MemoGroup(pc PageContext, oob bool) {
 	<div
 		id="memo-group"
 		class="memo-group"
@@ -175,17 +173,9 @@ templ memoGroupContent(pc PageContext, oob bool) {
 	</div>
 }
 
-// ScenarioMemoGroup renders the scenario-specific memos for sheet pages
-templ ScenarioMemoGroup(pc PageContext) {
-	@scenarioMemoGroupContent(pc, false)
-}
-
-// ScenarioMemoGroupOOB returns ScenarioMemoGroup with OOB swap attribute
-templ ScenarioMemoGroupOOB(pc PageContext) {
-	@scenarioMemoGroupContent(pc, true)
-}
-
-templ scenarioMemoGroupContent(pc PageContext, oob bool) {
+// ScenarioMemoGroup renders the scenario-specific memos for sheet pages.
+// Set oob=true for out-of-band swaps.
+templ ScenarioMemoGroup(pc PageContext, oob bool) {
 	<div
 		id="scenario-memo-group"
 		class="memo-group"

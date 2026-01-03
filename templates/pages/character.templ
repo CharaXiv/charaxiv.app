@@ -1,0 +1,163 @@
+package pages
+
+import (
+	"charaxiv/templates/components"
+	"charaxiv/templates/icons"
+	. "charaxiv/templates/shared"
+)
+
+var sheetStyles = templ.NewOnceHandle()
+
+// CharacterSheet renders the character sheet with provided status data
+templ CharacterSheet(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
+	@Layout("Character", CharacterHeaderActions(pc, false), CharacterContent(pc, variables, computed, parameters, damageBonus))
+}
+
+// CharacterHeaderActions renders the header buttons for the character sheet.
+// Set oob=true for out-of-band swaps.
+templ CharacterHeaderActions(pc PageContext, oob bool) {
+	@components.HeaderActions("header-actions", oob) {
+		@characterHeaderButtons(pc)
+	}
+}
+
+templ characterHeaderButtons(pc PageContext) {
+	@PreviewToggle(pc)
+	@components.ButtonLink(components.ButtonGhostBlue, components.ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
+		@icons.IconAddressBook()
+	}
+	@components.Button(components.ButtonSolidBlue, components.ButtonSizeIcon, templ.Attributes{"title": "Share options"}) {
+		@icons.IconArrowUpFromBracket()
+	}
+}
+
+// PreviewToggle renders the preview mode toggle button (only shown to owners)
+templ PreviewToggle(pc PageContext) {
+	if pc.IsOwner {
+		if pc.Preview {
+			@components.Button(components.ButtonSolidBlue, components.ButtonSizeIcon, templ.Attributes{
+				"id":        "preview-toggle",
+				"title":     "Exit preview mode",
+				"hx-post":   "/api/preview/off",
+				"hx-target": "#memo-group",
+				"hx-swap":   "outerHTML",
+			}) {
+				@icons.IconEye()
+			}
+		} else {
+			@components.Button(components.ButtonGhost, components.ButtonSizeIcon, templ.Attributes{
+				"id":        "preview-toggle",
+				"title":     "Preview as visitor",
+				"hx-post":   "/api/preview/on",
+				"hx-target": "#memo-group",
+				"hx-swap":   "outerHTML",
+			}) {
+				@icons.IconEye()
+			}
+		}
+	}
+}
+
+// PreviewModeFragments returns the fragments needed for preview mode toggle
+templ PreviewModeFragments(pc PageContext) {
+	@components.MemoGroup(pc, false)
+	@components.ScenarioMemoGroup(pc, true)
+	@CharacterHeaderActions(pc, true)
+}
+
+// CharacterContent renders the main character sheet content
+templ CharacterContent(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
+	@sheetStyles.Once() {
+		<style>
+			.sheet {
+				display: grid;
+				grid-template-columns: 1fr;
+				max-width: 440px;
+				margin: 0 auto;
+			}
+
+			@media (min-width: 640px) {
+				.sheet {
+					grid-template-columns: minmax(0, 1fr) 320px;
+					max-width: none;
+				}
+			}
+
+			@media (min-width: 768px) {
+				.sheet {
+					grid-template-columns: minmax(0, 1fr) 320px;
+					gap: var(--space-2);
+					max-width: 768px;
+					margin: 0 auto;
+				}
+			}
+
+			@media (min-width: 1024px) {
+				.sheet {
+					grid-template-columns: minmax(0, 1fr) 648px;
+					gap: var(--space-4);
+					max-width: 1104px;
+				}
+			}
+
+			@media (min-width: 1536px) {
+				.sheet {
+					grid-template-columns: 440px 968px;
+					gap: var(--space-4);
+					max-width: 1536px;
+				}
+			}
+
+			.sheet-right {
+				display: grid;
+				grid-template-columns: 1fr;
+				gap: var(--space-2);
+			}
+
+			@media (min-width: 1024px) {
+				.sheet-right {
+					grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+				}
+			}
+
+			@media (min-width: 1536px) {
+				.sheet-right {
+					grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+				}
+			}
+
+			.panel {
+				background: var(--white);
+				border-radius: var(--radius-lg);
+				padding: var(--space-4);
+				box-shadow: var(--shadow-default);
+			}
+
+			.panel h2 {
+				margin-bottom: var(--space-2);
+				color: var(--blue-800);
+				font-size: var(--font-size-lg);
+				font-weight: var(--font-weight-semibold);
+			}
+
+			.sheet-left {
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-4);
+			}
+		</style>
+	}
+	<div class="sheet">
+		<div class="sheet-left">
+			@components.Profile(pc)
+			@components.ScenarioMemoGroup(pc, false)
+		</div>
+		<div class="sheet-right">
+			@components.StatusPanel(pc, variables, computed, parameters, damageBonus, false)
+			<div class="panel">
+				<h2>Skills</h2>
+				<p>Skills list.</p>
+			</div>
+		</div>
+	</div>
+}
