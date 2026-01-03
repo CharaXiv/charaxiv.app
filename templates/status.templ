@@ -243,31 +243,9 @@ templ StatusPanel(pc PageContext, variables []StatusVariable, computed []Compute
 				font-size: var(--font-size-sm);
 			}
 
-			/* Damage bonus input */
+			/* Damage bonus input wrapper */
 			.db-input-wrapper {
 				width: 100%;
-			}
-
-			.db-input {
-				width: 100%;
-				height: 32px;
-				padding: 0 var(--space-2);
-				border: 1px solid var(--slate-200);
-				border-radius: var(--radius-md);
-				font-size: var(--font-size-base);
-				font-weight: var(--font-weight-semibold);
-				text-align: center;
-				outline: none;
-				transition: var(--transition-fast);
-			}
-
-			.db-input:focus {
-				border-color: var(--blue-500);
-			}
-
-			.db-input::placeholder {
-				color: var(--slate-400);
-				font-weight: var(--font-weight-semibold);
 			}
 
 			/* Indefinite value (read-only) */
@@ -351,16 +329,14 @@ templ ParameterRow(pc PageContext, p StatusParameter) {
 templ DamageBonusRow(pc PageContext, damageBonus string) {
 	<div class="parameter-key">DB</div>
 	<div class="db-input-wrapper">
-		<input
-			type="text"
-			class="db-input"
-			name="param_db"
-			value={ damageBonus }
-			placeholder={ damageBonus }
-			if pc.IsReadOnly() {
-				readonly
-			}
-		/>
+		@TextInput(TextInputConfig{
+			ID:          "param-db",
+			Name:        "param_db",
+			Value:       damageBonus,
+			Placeholder: damageBonus,
+			Readonly:    pc.IsReadOnly(),
+			Center:      true,
+		})
 	</div>
 	<div class="parameter-default"></div>
 }
