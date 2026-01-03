@@ -112,7 +112,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			readonly?={ cfg.Readonly }
 			if !cfg.Readonly {
 				hx-post={ fmt.Sprintf("/api/status/%s/set", cfg.ID) }
-				hx-trigger="input changed delay:200ms"
+				hx-trigger="input changed delay:3000ms"
 				hx-include="this"
 			}
 		/>
