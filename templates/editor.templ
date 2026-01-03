@@ -156,6 +156,9 @@ templ MarkdownEditorEdit(id string, name string, placeholder string, value strin
 		<style>
 			.markdown-editor-wrapper {
 				width: 100%;
+				background: var(--white);
+				border-radius: var(--radius-lg);
+				overflow: hidden;
 			}
 
 			/* EasyMDE customizations */
@@ -164,8 +167,9 @@ templ MarkdownEditorEdit(id string, name string, placeholder string, value strin
 			}
 
 			.markdown-editor-wrapper .EasyMDEContainer .CodeMirror {
-				border: 1px solid var(--slate-200);
-				border-radius: 0 0 var(--radius-md) var(--radius-md);
+				border: none;
+				border-top: 1px solid var(--slate-200);
+				border-radius: 0;
 				font-family: inherit;
 				font-size: var(--font-size-base);
 				min-height: 150px;
@@ -177,9 +181,8 @@ templ MarkdownEditorEdit(id string, name string, placeholder string, value strin
 			}
 
 			.markdown-editor-wrapper .editor-toolbar {
-				border: 1px solid var(--slate-200);
-				border-bottom: none;
-				border-radius: var(--radius-md) var(--radius-md) 0 0;
+				border: none;
+				border-radius: 0;
 				background: var(--slate-50);
 				padding: var(--space-2);
 			}
