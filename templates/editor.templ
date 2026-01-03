@@ -2,6 +2,7 @@ package templates
 
 var editorStyles = templ.NewOnceHandle()
 var editorScript = templ.NewOnceHandle()
+var editorDeps = templ.NewOnceHandle()
 var markdownStyles = templ.NewOnceHandle()
 var markdownScript = templ.NewOnceHandle()
 
@@ -180,7 +181,7 @@ templ MarkdownRenderer(title string, content string, secret bool) {
 		</style>
 	}
 	@markdownScript.Once() {
-		<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" async></script>
 		<script>
 			(function() {
 				function renderMarkdown() {
@@ -227,6 +228,12 @@ templ MarkdownRenderer(title string, content string, secret bool) {
 
 // MarkdownEditorEdit renders the EasyMDE editor
 templ MarkdownEditorEdit(id string, name string, placeholder string, value string, secret bool) {
+	@editorDeps.Once() {
+		<!-- Load EasyMDE CSS asynchronously to avoid render blocking -->
+		<link rel="stylesheet" href="https://unpkg.com/easymde@2.18.0/dist/easymde.min.css" media="print" onload="this.media='all'"/>
+		<noscript><link rel="stylesheet" href="https://unpkg.com/easymde@2.18.0/dist/easymde.min.css"/></noscript>
+		<script src="https://unpkg.com/easymde@2.18.0/dist/easymde.min.js" async></script>
+	}
 	@editorStyles.Once() {
 		<style>
 			.markdown-editor-wrapper {
