@@ -11,6 +11,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -45,7 +46,7 @@ func buildPageContext(store *models.Store) shared.PageContext {
 }
 
 // statusToTemplates converts model status to template types
-func statusToTemplates(status *models.Cthulhu6Status) ([]shared.StatusVariable, []shared.ComputedValue, []shared.StatusParameter, string) {
+func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Skills) ([]shared.StatusVariable, []shared.ComputedValue, []shared.StatusParameter, string, []shared.Skill, shared.SkillExtra, shared.SkillPoints) {
 	// Variables in display order
 	varOrder := []string{"STR", "CON", "POW", "DEX", "APP", "SIZ", "INT", "EDU"}
 	variables := make([]shared.StatusVariable, 0, len(varOrder))
@@ -88,7 +89,37 @@ func statusToTemplates(status *models.Cthulhu6Status) ([]shared.StatusVariable, 
 		})
 	}
 
-	return variables, computed, parameters, status.DamageBonus()
+	// Skills
+	skillList := make([]shared.Skill, 0, len(skills.Skills))
+	for key, s := range skills.Skills {
+		skillList = append(skillList, shared.Skill{
+			Key:   key,
+			Init:  status.SkillInitialValue(key),
+			Job:   s.Job,
+			Hobby: s.Hobby,
+			Perm:  s.Perm,
+			Temp:  s.Temp,
+			Grow:  s.Grow,
+			Order: s.Order,
+		})
+	}
+	// Sort by order
+	sort.Slice(skillList, func(i, j int) bool {
+		return skillList[i].Order < skillList[j].Order
+	})
+
+	skillExtra := shared.SkillExtra{
+		Job:   skills.Extra.Job,
+		Hobby: skills.Extra.Hobby,
+	}
+
+	remJob, remHobby := status.RemainingPoints(skills)
+	skillPoints := shared.SkillPoints{
+		Job:   remJob,
+		Hobby: remHobby,
+	}
+
+	return variables, computed, parameters, status.DamageBonus(), skillList, skillExtra, skillPoints
 }
 
 // proxyWebSocket proxies a WebSocket connection to the target host.
@@ -219,8 +250,9 @@ func main() {
 	r.Get("/", HTML(func(r *http.Request) templ.Component {
 		ctx := buildPageContext(charStore)
 		status := charStore.GetStatus()
-		vars, computed, params, db := statusToTemplates(status)
-		return pages.CharacterSheet(ctx, vars, computed, params, db)
+		skills := charStore.GetSkills()
+		vars, computed, params, db, skillList, skillExtra, skillPoints := statusToTemplates(status, skills)
+		return pages.CharacterSheet(ctx, vars, computed, params, db, skillList, skillExtra, skillPoints)
 	}))
 
 	// Preview mode toggle - returns targeted fragments with OOB swaps
@@ -234,29 +266,6 @@ func main() {
 		ctx := buildPageContext(charStore)
 		ctx.Preview = false
 		return pages.PreviewModeFragments(ctx)
-	}))
-
-	// Status variable adjustment (e.g., STR, CON, etc.)
-	r.Post("/api/status/{key}/adjust", HTML(func(r *http.Request) templ.Component {
-		key := chi.URLParam(r, "key")
-		// Remove "status-" prefix if present
-		key = strings.TrimPrefix(key, "status-")
-
-		deltaStr := r.URL.Query().Get("delta")
-		delta := 0
-		fmt.Sscanf(deltaStr, "%d", &delta)
-
-		ctx := shared.NewPageContext()
-		updated := charStore.UpdateVariableBase(key, delta)
-		if updated == nil {
-			// Key not found, return empty
-			return shared.Empty()
-		}
-
-		// Return the full status panel (for now - could optimize to just return the row)
-		status := charStore.GetStatus()
-		vars, computed, params, db := statusToTemplates(status)
-		return components.StatusPanel(ctx, vars, computed, params, db, true)
 	}))
 
 	// Status variable set (direct value from input)
@@ -310,7 +319,8 @@ func main() {
 		// Return the full status panel
 		ctx := shared.NewPageContext()
 		status = charStore.GetStatus()
-		vars, computed, params, db := statusToTemplates(status)
+		skills := charStore.GetSkills()
+		vars, computed, params, db, _, _, _ := statusToTemplates(status, skills)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		components.StatusPanel(ctx, vars, computed, params, db, true).Render(r.Context(), w)
 	})
@@ -333,6 +343,117 @@ func main() {
 		// (the editor already has the correct value)
 		w.WriteHeader(http.StatusNoContent)
 	})
+
+	// Skill grow toggle
+	r.Post("/api/skill/{key}/grow", HTML(func(r *http.Request) templ.Component {
+		key := chi.URLParam(r, "key")
+
+		skill, ok := charStore.GetSkill(key)
+		if !ok {
+			return shared.Empty()
+		}
+
+		// Toggle grow flag
+		skill.Grow = !skill.Grow
+		charStore.UpdateSkill(key, skill)
+
+		ctx := shared.NewPageContext()
+		status := charStore.GetStatus()
+		skills := charStore.GetSkills()
+		_, _, _, _, skillList, skillExtra, skillPoints := statusToTemplates(status, skills)
+		return components.SkillsPanel(ctx, skillList, skillExtra, skillPoints, true)
+	}))
+
+	// Skill field adjustment (job, hobby, perm, temp)
+	r.Post("/api/skill/{key}/{field}/adjust", HTML(func(r *http.Request) templ.Component {
+		key := chi.URLParam(r, "key")
+		field := chi.URLParam(r, "field")
+
+		deltaStr := r.URL.Query().Get("delta")
+		delta := 0
+		fmt.Sscanf(deltaStr, "%d", &delta)
+
+		skill, ok := charStore.GetSkill(key)
+		if !ok {
+			return shared.Empty()
+		}
+
+		// Apply delta to the appropriate field
+		switch field {
+		case "job":
+			skill.Job += delta
+			if skill.Job < 0 {
+				skill.Job = 0
+			}
+		case "hobby":
+			skill.Hobby += delta
+			if skill.Hobby < 0 {
+				skill.Hobby = 0
+			}
+		case "perm":
+			skill.Perm += delta
+		case "temp":
+			skill.Temp += delta
+		}
+
+		charStore.UpdateSkill(key, skill)
+
+		ctx := shared.NewPageContext()
+		status := charStore.GetStatus()
+		skills := charStore.GetSkills()
+		_, _, _, _, skillList, skillExtra, skillPoints := statusToTemplates(status, skills)
+		return components.SkillsPanel(ctx, skillList, skillExtra, skillPoints, true)
+	}))
+
+	// Extra points adjustment
+	r.Post("/api/status/{key}/adjust", HTML(func(r *http.Request) templ.Component {
+		key := chi.URLParam(r, "key")
+
+		// Handle extra-job and extra-hobby
+		if key == "extra-job" || key == "extra-hobby" {
+			deltaStr := r.URL.Query().Get("delta")
+			delta := 0
+			fmt.Sscanf(deltaStr, "%d", &delta)
+
+			skills := charStore.GetSkills()
+			if key == "extra-job" {
+				skills.Extra.Job += delta
+				if skills.Extra.Job < 0 {
+					skills.Extra.Job = 0
+				}
+			} else {
+				skills.Extra.Hobby += delta
+				if skills.Extra.Hobby < 0 {
+					skills.Extra.Hobby = 0
+				}
+			}
+			charStore.SetSkillExtra(skills.Extra.Job, skills.Extra.Hobby)
+
+			ctx := shared.NewPageContext()
+			status := charStore.GetStatus()
+			skills = charStore.GetSkills()
+			_, _, _, _, skillList, skillExtra, skillPoints := statusToTemplates(status, skills)
+			return components.SkillsPanel(ctx, skillList, skillExtra, skillPoints, true)
+		}
+
+		// Original status variable handling
+		key = strings.TrimPrefix(key, "status-")
+
+		deltaStr := r.URL.Query().Get("delta")
+		delta := 0
+		fmt.Sscanf(deltaStr, "%d", &delta)
+
+		ctx := shared.NewPageContext()
+		updated := charStore.UpdateVariableBase(key, delta)
+		if updated == nil {
+			return shared.Empty()
+		}
+
+		status := charStore.GetStatus()
+		skills := charStore.GetSkills()
+		vars, computed, params, db, _, _, _ := statusToTemplates(status, skills)
+		return components.StatusPanel(ctx, vars, computed, params, db, true)
+	}))
 
 	// Storage test endpoint
 	r.Get("/api/storage/test", func(w http.ResponseWriter, r *http.Request) {

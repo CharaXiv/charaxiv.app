@@ -6,6 +6,7 @@ import "sync"
 type Store struct {
 	mu     sync.RWMutex
 	status *Cthulhu6Status
+	skills *Cthulhu6Skills
 	memos  map[string]string
 }
 
@@ -13,6 +14,7 @@ type Store struct {
 func NewStore() *Store {
 	return &Store{
 		status: NewCthulhu6Status(),
+		skills: NewCthulhu6Skills(),
 		memos:  make(map[string]string),
 	}
 }
@@ -111,4 +113,34 @@ func (s *Store) SetMemo(id string, value string) bool {
 	}
 	s.memos[id] = value
 	return true
+}
+
+// GetSkills returns the current skills
+func (s *Store) GetSkills() *Cthulhu6Skills {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.skills
+}
+
+// SetSkillExtra sets extra skill points
+func (s *Store) SetSkillExtra(job, hobby int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.skills.Extra.Job = job
+	s.skills.Extra.Hobby = hobby
+}
+
+// UpdateSkill updates a skill's values
+func (s *Store) UpdateSkill(key string, skill Cthulhu6Skill) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.skills.Skills[key] = skill
+}
+
+// GetSkill returns a skill by key
+func (s *Store) GetSkill(key string) (Cthulhu6Skill, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	skill, ok := s.skills.Skills[key]
+	return skill, ok
 }

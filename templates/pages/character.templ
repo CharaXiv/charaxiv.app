@@ -9,8 +9,8 @@ import (
 var sheetStyles = templ.NewOnceHandle()
 
 // CharacterSheet renders the character sheet with provided status data
-templ CharacterSheet(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
-	@Layout("Character", CharacterHeaderActions(pc, false), CharacterContent(pc, variables, computed, parameters, damageBonus))
+templ CharacterSheet(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string, skills []Skill, skillExtra SkillExtra, skillPoints SkillPoints) {
+	@Layout("Character", CharacterHeaderActions(pc, false), CharacterContent(pc, variables, computed, parameters, damageBonus, skills, skillExtra, skillPoints))
 }
 
 // CharacterHeaderActions renders the header buttons for the character sheet.
@@ -66,7 +66,7 @@ templ PreviewModeFragments(pc PageContext) {
 }
 
 // CharacterContent renders the main character sheet content
-templ CharacterContent(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
+templ CharacterContent(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string, skills []Skill, skillExtra SkillExtra, skillPoints SkillPoints) {
 	@sheetStyles.Once() {
 		<style>
 			.sheet {
@@ -154,10 +154,7 @@ templ CharacterContent(pc PageContext, variables []StatusVariable, computed []Co
 		</div>
 		<div class="sheet-right">
 			@components.StatusPanel(pc, variables, computed, parameters, damageBonus, false)
-			<div class="panel">
-				<h2>Skills</h2>
-				<p>Skills list.</p>
-			</div>
+			@components.SkillsPanel(pc, skills, skillExtra, skillPoints, false)
 		</div>
 	</div>
 }

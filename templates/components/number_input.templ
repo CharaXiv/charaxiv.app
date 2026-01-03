@@ -7,6 +7,7 @@ import (
 )
 
 var numberInputStyles = templ.NewOnceHandle()
+var numberInputScript = templ.NewOnceHandle()
 
 // NumberInputConfig holds configuration for a number input
 type NumberInputConfig struct {
@@ -80,12 +81,31 @@ templ NumberInput(cfg NumberInputConfig) {
 			}
 		</style>
 	}
+	@numberInputScript.Once() {
+		<script>
+			function adjustNumberInput(btn, delta) {
+				const wrapper = btn.parentNode;
+				const input = wrapper.querySelector('input');
+				const value = parseInt(input.value) || 0;
+				const min = parseInt(input.min);
+				const max = parseInt(input.max);
+				const newValue = Math.max(min, Math.min(max, value + delta));
+				input.value = newValue;
+
+				wrapper.querySelectorAll('button').forEach(b => {
+					const d = parseInt(b.title);
+					b.disabled = (d < 0 && newValue <= min) || (d > 0 && newValue >= max);
+				});
+			}
+		</script>
+	}
 	<div class="number-input" id={ cfg.ID + "-wrapper" }>
 		<button
 			type="button"
 			class="number-input-btn"
 			title="-5"
 			disabled?={ cfg.Readonly || cfg.Value <= cfg.Min }
+			hx-on::before-request="adjustNumberInput(this, -5)"
 			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=-5", cfg.ID) }
 			hx-target={ "#" + cfg.ID + "-wrapper" }
 			hx-swap="outerHTML"
@@ -97,6 +117,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			class="number-input-btn"
 			title="-1"
 			disabled?={ cfg.Readonly || cfg.Value <= cfg.Min }
+			hx-on::before-request="adjustNumberInput(this, -1)"
 			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=-1", cfg.ID) }
 			hx-target={ "#" + cfg.ID + "-wrapper" }
 			hx-swap="outerHTML"
@@ -124,6 +145,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			class="number-input-btn"
 			title="+1"
 			disabled?={ cfg.Readonly || cfg.Value >= cfg.Max }
+			hx-on::before-request="adjustNumberInput(this, 1)"
 			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=1", cfg.ID) }
 			hx-target={ "#" + cfg.ID + "-wrapper" }
 			hx-swap="outerHTML"
@@ -135,6 +157,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			class="number-input-btn"
 			title="+5"
 			disabled?={ cfg.Readonly || cfg.Value >= cfg.Max }
+			hx-on::before-request="adjustNumberInput(this, 5)"
 			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=5", cfg.ID) }
 			hx-target={ "#" + cfg.ID + "-wrapper" }
 			hx-swap="outerHTML"

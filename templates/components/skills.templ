@@ -1,0 +1,458 @@
+package components
+
+import (
+	"fmt"
+	"strconv"
+
+	"charaxiv/templates/icons"
+	. "charaxiv/templates/shared"
+)
+
+var skillsStyles = templ.NewOnceHandle()
+
+// SkillsPanel renders the skills section.
+// Set oob=true for out-of-band swaps.
+templ SkillsPanel(pc PageContext, skills []Skill, extra SkillExtra, remaining SkillPoints, oob bool) {
+	<div
+		id="skills-panel"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
+		@SkillsPanelContent(pc, skills, extra, remaining)
+	</div>
+}
+
+// SkillsPanelContent renders the inner content of the skills panel
+templ SkillsPanelContent(pc PageContext, skills []Skill, extra SkillExtra, remaining SkillPoints) {
+	@skillsStyles.Once() {
+		<style>
+			.skills-panel {
+				background: var(--white);
+				border-radius: var(--radius-lg);
+				padding: var(--space-4);
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-4);
+				box-shadow: var(--shadow-default);
+			}
+
+			.skills-header {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+			}
+
+			.skills-title {
+				font-size: var(--font-size-xl);
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-800);
+			}
+
+			/* Points display (floating badge) */
+			.points-display {
+				display: flex;
+				flex-direction: row;
+				gap: var(--space-2);
+				background: var(--white);
+				border-radius: var(--radius-md);
+				padding: var(--space-1) var(--space-2);
+				box-shadow: var(--shadow-default);
+				font-size: var(--font-size-xs);
+				font-weight: var(--font-weight-semibold);
+			}
+
+			.points-label {
+				color: var(--slate-600);
+			}
+
+			.points-value {
+				color: var(--slate-800);
+			}
+
+			.points-value--positive {
+				color: var(--green-600);
+			}
+
+			.points-value--negative {
+				color: var(--red-600);
+			}
+
+			/* Extra points form */
+			.extra-points {
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-2);
+				padding: var(--space-3);
+				background: var(--slate-50);
+				border-radius: var(--radius-md);
+			}
+
+			.extra-points-title {
+				font-size: var(--font-size-sm);
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-700);
+			}
+
+			.extra-points-grid {
+				display: grid;
+				grid-template-columns: max-content 1fr;
+				gap: var(--space-2);
+				align-items: center;
+			}
+
+			.extra-points-label {
+				font-size: var(--font-size-sm);
+				font-weight: var(--font-weight-medium);
+				color: var(--slate-600);
+			}
+
+			.extra-points-wrapper {
+				border: 1px solid var(--slate-200);
+				border-radius: var(--radius-md);
+				background: var(--white);
+			}
+
+			/* Skills list */
+			.skills-list {
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-1);
+			}
+
+			/* Skill row */
+			.skill-row {
+				display: flex;
+				flex-direction: column;
+			}
+
+			.skill-header {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				gap: var(--space-2);
+				padding: var(--space-1);
+				border-radius: var(--radius-md);
+				cursor: pointer;
+				transition: var(--transition-fast);
+			}
+
+			.skill-header:hover {
+				background: var(--slate-50);
+			}
+
+			.skill-grow-btn {
+				width: 32px;
+				height: 32px;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				border: none;
+				background: transparent;
+				color: var(--slate-400);
+				border-radius: var(--radius-md);
+				cursor: pointer;
+				transition: var(--transition-fast);
+			}
+
+			.skill-grow-btn:hover:not(:disabled) {
+				background: var(--slate-100);
+				color: var(--slate-600);
+			}
+
+			.skill-grow-btn--checked {
+				color: var(--blue-600);
+			}
+
+			.skill-grow-btn .icon {
+				width: 16px;
+				height: 16px;
+			}
+
+			.skill-name {
+				flex-grow: 1;
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-700);
+			}
+
+			.skill-name--inactive {
+				font-weight: var(--font-weight-normal);
+				color: var(--slate-400);
+			}
+
+			.skill-points-display {
+				display: flex;
+				align-items: center;
+				height: 32px;
+				font-size: var(--font-size-xs);
+				font-variant-numeric: tabular-nums;
+				color: var(--slate-500);
+			}
+
+			.skill-points-display span {
+				padding: 0 2px;
+			}
+
+			.skill-points-zero {
+				color: var(--slate-300);
+			}
+
+			.skill-total {
+				width: 24px;
+				text-align: center;
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-800);
+				font-variant-numeric: tabular-nums;
+			}
+
+			.skill-expand-icon {
+				width: 32px;
+				height: 32px;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				color: var(--slate-400);
+			}
+
+			.skill-expand-icon .icon {
+				width: 12px;
+				height: 12px;
+			}
+
+			/* Skill detail (expandable) */
+			.skill-detail {
+				display: grid;
+				grid-template-columns: max-content 1fr;
+				gap: var(--space-2);
+				align-items: center;
+				padding: var(--space-2) var(--space-4);
+				background: var(--slate-50);
+				border-radius: var(--radius-md);
+				margin-left: 32px;
+			}
+
+			.skill-detail-label {
+				font-size: var(--font-size-sm);
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-600);
+			}
+
+			.skill-detail-wrapper {
+				border: 1px solid var(--slate-200);
+				border-radius: var(--radius-md);
+				background: var(--white);
+			}
+		</style>
+	}
+	<div class="skills-panel">
+		<div class="skills-header">
+			<h2 class="skills-title">技能</h2>
+			@PointsDisplay(remaining)
+		</div>
+		@ExtraPointsForm(pc, extra)
+		<div class="skills-list">
+			for _, skill := range skills {
+				@SkillRow(pc, skill, remaining)
+			}
+		</div>
+	</div>
+}
+
+// PointsDisplay shows remaining skill points
+templ PointsDisplay(remaining SkillPoints) {
+	<div class="points-display" id="points-display">
+		<span class="points-label">職業P</span>
+		<span class={ "points-value", templ.KV("points-value--positive", remaining.Job > 0), templ.KV("points-value--negative", remaining.Job < 0) }>
+			{ strconv.Itoa(remaining.Job) }
+		</span>
+		<span class="points-label">興味P</span>
+		<span class={ "points-value", templ.KV("points-value--positive", remaining.Hobby > 0), templ.KV("points-value--negative", remaining.Hobby < 0) }>
+			{ strconv.Itoa(remaining.Hobby) }
+		</span>
+	</div>
+}
+
+// ExtraPointsForm renders the extra points input form
+templ ExtraPointsForm(pc PageContext, extra SkillExtra) {
+	<div class="extra-points" id="extra-points">
+		<div class="extra-points-title">追加技能ポイント</div>
+		<div class="extra-points-grid">
+			<span class="extra-points-label">職業P</span>
+			<div class="extra-points-wrapper">
+				@NumberInput(NumberInputConfig{
+					ID:          "extra-job",
+					Name:        "extra_job",
+					Value:       extra.Job,
+					Min:         0,
+					Max:         999,
+					Placeholder: "0",
+					Readonly:    pc.IsReadOnly(),
+				})
+			</div>
+			<span class="extra-points-label">興味P</span>
+			<div class="extra-points-wrapper">
+				@NumberInput(NumberInputConfig{
+					ID:          "extra-hobby",
+					Name:        "extra_hobby",
+					Value:       extra.Hobby,
+					Min:         0,
+					Max:         999,
+					Placeholder: "0",
+					Readonly:    pc.IsReadOnly(),
+				})
+			</div>
+		</div>
+	</div>
+}
+
+// SkillRow renders a single skill with expandable details
+templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
+	{{ expanded := skill.Allocated() > 0 }}
+	<div class="skill-row" id={ "skill-row-" + skill.Key }>
+		<div class="skill-header">
+			<button
+				type="button"
+				class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", skill.Grow) }
+				title="成長チェック"
+				disabled?={ pc.IsReadOnly() }
+				hx-post={ fmt.Sprintf("/api/skill/%s/grow", skill.Key) }
+				hx-target="#skills-panel"
+				hx-swap="outerHTML"
+			>
+				if skill.Grow {
+					@icons.IconSquareCheck()
+				} else {
+					@icons.IconSquare()
+				}
+			</button>
+			<div class={ "skill-name", templ.KV("skill-name--inactive", skill.Allocated() == 0 && !skill.Grow) }>{ skill.Key }</div>
+			if skill.Allocated() > 0 {
+				@SkillPointsBreakdown(skill)
+			}
+			<div class="skill-total" title="達成値合計">{ strconv.Itoa(skill.Total()) }</div>
+			<div class="skill-expand-icon">
+				if expanded {
+					@icons.IconCaretUp()
+				} else {
+					@icons.IconCaretDown()
+				}
+			</div>
+		</div>
+		if !pc.IsReadOnly() {
+			@SkillDetail(pc, skill, remaining)
+		}
+	</div>
+}
+
+// SkillPointsBreakdown shows job/hobby/perm+temp breakdown
+templ SkillPointsBreakdown(skill Skill) {
+	<div class="skill-points-display" title="職業P / 興味P / 増加分+一時的">
+		<span class={ templ.KV("skill-points-zero", skill.Job == 0) }>{ fmt.Sprintf("%02d", skill.Job) }</span>
+		<span>/</span>
+		<span class={ templ.KV("skill-points-zero", skill.Hobby == 0) }>{ fmt.Sprintf("%02d", skill.Hobby) }</span>
+		<span>/</span>
+		<span class={ templ.KV("skill-points-zero", skill.Perm+skill.Temp == 0) }>{ fmt.Sprintf("%02d", skill.Perm+skill.Temp) }</span>
+	</div>
+}
+
+// SkillDetail renders the expandable detail section for a skill
+templ SkillDetail(pc PageContext, skill Skill, remaining SkillPoints) {
+	{{
+		total := skill.Total()
+		jobMax := min(99-(total-skill.Job), skill.Job+remaining.Job)
+		hobbyMax := min(99-(total-skill.Hobby), skill.Hobby+remaining.Hobby)
+		permMax := 99 - (total - skill.Perm)
+		tempMax := 99 - (total - skill.Temp)
+	}}
+	<div class="skill-detail">
+		<span class="skill-detail-label">職業P</span>
+		<div class="skill-detail-wrapper">
+			@SkillNumberInput(skill.Key, "job", skill.Job, 0, jobMax, pc.IsReadOnly())
+		</div>
+		<span class="skill-detail-label">興味P</span>
+		<div class="skill-detail-wrapper">
+			@SkillNumberInput(skill.Key, "hobby", skill.Hobby, 0, hobbyMax, pc.IsReadOnly())
+		</div>
+		<span class="skill-detail-label">増加分</span>
+		<div class="skill-detail-wrapper">
+			@SkillNumberInput(skill.Key, "perm", skill.Perm, -(total - skill.Perm), permMax, pc.IsReadOnly())
+		</div>
+		<span class="skill-detail-label">一時的</span>
+		<div class="skill-detail-wrapper">
+			@SkillNumberInput(skill.Key, "temp", skill.Temp, -(total - skill.Temp), tempMax, pc.IsReadOnly())
+		</div>
+	</div>
+}
+
+// SkillNumberInput renders a number input for skill values
+templ SkillNumberInput(skillKey, field string, value, minVal, maxVal int, readonly bool) {
+	{{ id := fmt.Sprintf("skill-%s-%s", skillKey, field) }}
+	<div class="number-input" id={ id + "-wrapper" }>
+		<button
+			type="button"
+			class="number-input-btn"
+			title="-5"
+			disabled?={ readonly || value <= minVal }
+			hx-on::before-request="adjustNumberInput(this, -5)"
+			hx-post={ fmt.Sprintf("/api/skill/%s/%s/adjust?delta=-5", skillKey, field) }
+			hx-target="#skills-panel"
+			hx-swap="outerHTML"
+		>
+			@icons.IconAnglesLeft()
+		</button>
+		<button
+			type="button"
+			class="number-input-btn"
+			title="-1"
+			disabled?={ readonly || value <= minVal }
+			hx-on::before-request="adjustNumberInput(this, -1)"
+			hx-post={ fmt.Sprintf("/api/skill/%s/%s/adjust?delta=-1", skillKey, field) }
+			hx-target="#skills-panel"
+			hx-swap="outerHTML"
+		>
+			@icons.IconAngleLeft()
+		</button>
+		<input
+			type="number"
+			class="number-input-field"
+			id={ id }
+			name={ id }
+			value={ strconv.Itoa(value) }
+			min={ strconv.Itoa(minVal) }
+			max={ strconv.Itoa(maxVal) }
+			readonly?={ readonly }
+		/>
+		<button
+			type="button"
+			class="number-input-btn"
+			title="+1"
+			disabled?={ readonly || value >= maxVal }
+			hx-on::before-request="adjustNumberInput(this, 1)"
+			hx-post={ fmt.Sprintf("/api/skill/%s/%s/adjust?delta=1", skillKey, field) }
+			hx-target="#skills-panel"
+			hx-swap="outerHTML"
+		>
+			@icons.IconAngleRight()
+		</button>
+		<button
+			type="button"
+			class="number-input-btn"
+			title="+5"
+			disabled?={ readonly || value >= maxVal }
+			hx-on::before-request="adjustNumberInput(this, 5)"
+			hx-post={ fmt.Sprintf("/api/skill/%s/%s/adjust?delta=5", skillKey, field) }
+			hx-target="#skills-panel"
+			hx-swap="outerHTML"
+		>
+			@icons.IconAnglesRight()
+		</button>
+	</div>
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
