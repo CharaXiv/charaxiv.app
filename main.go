@@ -223,12 +223,14 @@ func main() {
 
 	// Preview mode toggle - returns targeted fragments with OOB swaps
 	r.Post("/api/preview/on", HTML(func(r *http.Request) templ.Component {
-		ctx := templates.PageContext{IsOwner: true, Preview: true}
+		ctx := buildPageContext(charStore)
+		ctx.Preview = true
 		return templates.PreviewModeFragments(ctx)
 	}))
 
 	r.Post("/api/preview/off", HTML(func(r *http.Request) templ.Component {
-		ctx := templates.PageContext{IsOwner: true, Preview: false}
+		ctx := buildPageContext(charStore)
+		ctx.Preview = false
 		return templates.PreviewModeFragments(ctx)
 	}))
 
