@@ -16,7 +16,7 @@ templ SkillsPanel(state SheetState, oob bool) {
 	<div
 		id="skills-panel"
 		if oob {
-			hx-swap-oob="morph:outerHTML"
+			hx-swap-oob="true"
 		}
 	>
 		@SkillsPanelContent(state)

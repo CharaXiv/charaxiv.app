@@ -13,6 +13,14 @@ templ StatusPanelWithPoints(state SheetState) {
 	@PointsDisplay(state.Skills.Remaining, true)
 }
 
+// StatusPanelWithSkills renders the status panel plus an OOB update for skills panel
+// Used when DEX/EDU changes affect skill initial values (回避, 母国語)
+templ StatusPanelWithSkills(state SheetState) {
+	@StatusPanel(state, true)
+	@SkillsPanel(state, true)
+	@PointsDisplay(state.Skills.Remaining, true)
+}
+
 var statusStyles = templ.NewOnceHandle()
 
 // StatusPanel renders the ability scores panel.

@@ -342,10 +342,14 @@ func main() {
 		state := buildSheetState(pc, status, skills)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
+		// For DEX/EDU changes, also update skills panel (回避 depends on DEX, 母国語 depends on EDU)
 		// For INT/EDU changes, also update skill points display
-		if key == "INT" || key == "EDU" {
+		switch key {
+		case "DEX", "EDU":
+			components.StatusPanelWithSkills(state).Render(r.Context(), w)
+		case "INT":
 			components.StatusPanelWithPoints(state).Render(r.Context(), w)
-		} else {
+		default:
 			components.StatusPanel(state, true).Render(r.Context(), w)
 		}
 	})
@@ -508,11 +512,16 @@ func main() {
 		skills := charStore.GetSkills()
 		state := buildSheetState(pc, status, skills)
 
+		// For DEX/EDU changes, also update skills panel (回避 depends on DEX, 母国語 depends on EDU)
 		// For INT/EDU changes, also update skill points display
-		if key == "INT" || key == "EDU" {
+		switch key {
+		case "DEX", "EDU":
+			return components.StatusPanelWithSkills(state)
+		case "INT":
 			return components.StatusPanelWithPoints(state)
+		default:
+			return components.StatusPanel(state, true)
 		}
-		return components.StatusPanel(state, true)
 	}))
 
 	// Storage test endpoint
