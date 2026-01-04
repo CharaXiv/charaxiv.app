@@ -110,17 +110,20 @@ templ liveReloadScript() {
 			let ws = null;
 			let connected = false;
 			let currentBuildID = null;
+			let pendingBuildID = null;
 			let reconnectAttempts = 0;
 			let lastHeartbeat = Date.now();
 			let heartbeatCheckInterval = null;
 			let reconnectTimeout = null;
 			let hideIndicatorTimeout = null;
+			let stableReloadTimeout = null;
 			
 			// Config
 			const MAX_RECONNECT_ATTEMPTS = 60;
 			const HEARTBEAT_TIMEOUT_MS = 15000; // Expect heartbeat every 5s, timeout after 15s
 			const BASE_RECONNECT_DELAY_MS = 100;
 			const MAX_RECONNECT_DELAY_MS = 5000;
+			const STABLE_DELAY_MS = 500; // Wait for server to be stable before reloading
 			
 			// UI
 			const indicator = document.getElementById('live-reload-indicator');
@@ -173,10 +176,41 @@ templ liveReloadScript() {
 				}
 			}
 			
+			function cancelPendingReload() {
+				if (stableReloadTimeout) {
+					clearTimeout(stableReloadTimeout);
+					stableReloadTimeout = null;
+					console.log('[LiveReload] Pending reload cancelled (connection lost)');
+				}
+			}
+			
+			function scheduleStableReload(buildID) {
+				// Cancel any existing pending reload
+				if (stableReloadTimeout) {
+					clearTimeout(stableReloadTimeout);
+				}
+				
+				// Track the latest build ID we want to reload to
+				pendingBuildID = buildID;
+				
+				setStatus('reconnecting', 'Waiting for stable server...');
+				console.log(`[LiveReload] Scheduling reload to build ${buildID} in ${STABLE_DELAY_MS}ms`);
+				
+				stableReloadTimeout = setTimeout(() => {
+					if (connected && pendingBuildID !== null) {
+						console.log('[LiveReload] Server stable, reloading to build:', pendingBuildID);
+						location.reload();
+					}
+				}, STABLE_DELAY_MS);
+			}
+			
 			function scheduleReconnect() {
 				if (reconnectTimeout) {
 					clearTimeout(reconnectTimeout);
 				}
+				
+				// Cancel pending reload since connection is lost
+				cancelPendingReload();
 				
 				if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
 					setStatus('failed', 'Connection failed');
@@ -208,7 +242,10 @@ templ liveReloadScript() {
 					connected = true;
 					reconnectAttempts = 0; // Reset on successful connection
 					startHeartbeatCheck();
-					setStatus('connected', 'Live reload active', true);
+					// Don't auto-hide if we have a pending reload
+					if (!pendingBuildID) {
+						setStatus('connected', 'Live reload active', true);
+					}
 				};
 				
 				ws.onmessage = function(event) {
@@ -227,10 +264,19 @@ templ liveReloadScript() {
 							// First connection, just record the build ID
 							currentBuildID = serverBuildID;
 							console.log('[LiveReload] Initial build ID:', currentBuildID);
+							setStatus('connected', 'Live reload active', true);
 						} else if (serverBuildID > currentBuildID) {
-							// Server has newer build, reload
-							console.log('[LiveReload] Build ID changed:', currentBuildID, '->', serverBuildID, ', reloading...');
-							location.reload();
+							// Server has newer build, schedule reload after stability check
+							console.log('[LiveReload] Build ID changed:', currentBuildID, '->', serverBuildID);
+							scheduleStableReload(serverBuildID);
+						} else if (pendingBuildID !== null && serverBuildID >= pendingBuildID) {
+							// We reconnected and server still has the build we want
+							console.log('[LiveReload] Reconnected, resuming reload to build:', serverBuildID);
+							scheduleStableReload(serverBuildID);
+						} else {
+							// Same or older build, clear pending
+							pendingBuildID = null;
+							setStatus('connected', 'Live reload active', true);
 						}
 						return;
 					}
@@ -238,7 +284,7 @@ templ liveReloadScript() {
 					if (data.startsWith('reload:')) {
 						const newBuildID = parseInt(data.slice(7), 10);
 						console.log('[LiveReload] Reload signal received, build:', newBuildID);
-						location.reload();
+						scheduleStableReload(newBuildID);
 						return;
 					}
 				};
