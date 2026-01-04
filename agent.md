@@ -57,6 +57,8 @@ The `~/LegacyCharaXiv` directory contains the previous SvelteKit/Firebase implem
 
 ## Tech Decisions
 
+See `CONTRACT.md` for hard complexity caps.
+
 - **No JS frameworks**: HTMX + templ for interactivity
 - **Co-located styles**: CSS in templ files using `OnceHandle`
 - **OOB swaps**: For updating multiple page regions from one response
