@@ -133,6 +133,8 @@ templ SkillsPanelContent(pc PageContext, skills []Skill, extra SkillExtra, remai
 				border: 1px solid var(--slate-200);
 				border-radius: var(--radius-md);
 				background: var(--white);
+				min-width: 0;
+				overflow: hidden;
 			}
 
 			/* Skills list */
@@ -322,8 +324,7 @@ templ ExtraPointsForm(pc PageContext, extra SkillExtra) {
 					ID:          "extra-job",
 					Name:        "extra_job",
 					Value:       extra.Job,
-					Min:         0,
-					Max:         999,
+					Min:         Ptr(0),
 					Placeholder: "0",
 					Readonly:    pc.IsReadOnly(),
 					HxSwap:      "none",
@@ -335,8 +336,7 @@ templ ExtraPointsForm(pc PageContext, extra SkillExtra) {
 					ID:          "extra-hobby",
 					Name:        "extra_hobby",
 					Value:       extra.Hobby,
-					Min:         0,
-					Max:         999,
+					Min:         Ptr(0),
 					Placeholder: "0",
 					Readonly:    pc.IsReadOnly(),
 					HxSwap:      "none",
@@ -448,8 +448,8 @@ func skillInputConfig(skillKey, field string, value, minVal, maxVal int, readonl
 		ID:       id,
 		Name:     id,
 		Value:    value,
-		Min:      minVal,
-		Max:      maxVal,
+		Min:      Ptr(minVal),
+		Max:      Ptr(maxVal),
 		Readonly: readonly,
 		HxPost:   fmt.Sprintf("/api/skill/%s/%s/adjust", skillKey, field),
 	}

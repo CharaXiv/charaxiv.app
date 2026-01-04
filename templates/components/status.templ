@@ -289,8 +289,8 @@ templ StatusRow(pc PageContext, v StatusVariable) {
 			ID:          "status-" + v.Key,
 			Name:        "status_" + v.Key,
 			Value:       v.Base,
-			Min:         v.Min,
-			Max:         v.Max,
+			Min:         Ptr(v.Min),
+			Max:         Ptr(v.Max),
 			Placeholder: v.Key,
 			Readonly:    pc.IsReadOnly(),
 		})
@@ -306,8 +306,10 @@ templ ParameterRow(pc PageContext, p StatusParameter) {
 			ID:          "param-" + p.Key,
 			Name:        "param_" + p.Key,
 			Value:       p.EffectiveValue(),
+			Min:         Ptr(0),
 			Placeholder: strconv.Itoa(p.DefaultValue),
 			Readonly:    pc.IsReadOnly(),
+			HxSwap:      "none",
 		})
 	</div>
 	<div class="parameter-default">{ strconv.Itoa(p.DefaultValue) }</div>

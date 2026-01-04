@@ -456,6 +456,22 @@ func main() {
 			return components.SkillsPanelWithPoints(ctx, skillList, skillExtra, skillPoints)
 		}
 
+		// Handle parameters (HP, MP, SAN)
+		if strings.HasPrefix(key, "param-") {
+			paramKey := strings.TrimPrefix(key, "param-")
+			deltaStr := r.URL.Query().Get("delta")
+			delta := 0
+			fmt.Sscanf(deltaStr, "%d", &delta)
+
+			charStore.UpdateParameter(paramKey, delta)
+
+			ctx := shared.NewPageContext()
+			status := charStore.GetStatus()
+			skills := charStore.GetSkills()
+			vars, computed, params, db, _, _, _ := statusToTemplates(status, skills)
+			return components.StatusPanel(ctx, vars, computed, params, db, true)
+		}
+
 		// Original status variable handling
 		key = strings.TrimPrefix(key, "status-")
 

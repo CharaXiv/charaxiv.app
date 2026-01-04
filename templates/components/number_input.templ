@@ -14,14 +14,37 @@ type NumberInputConfig struct {
 	ID          string
 	Name        string
 	Value       int
-	Min         int
-	Max         int
+	Min         *int // nil means no minimum
+	Max         *int // nil means no maximum
 	Placeholder string
 	Readonly    bool
 	HxPost      string // Base path for adjust endpoint (e.g., "/api/skill/回避/job/adjust"), defaults to "/api/status/{ID}/adjust"
 	HxTarget    string // Target selector, defaults to self ("#{ID}-wrapper")
 	HxSwap      string // Swap strategy, defaults to "outerHTML". Use "none" for OOB-only responses.
 }
+
+// Ptr is a generic helper to create a pointer to any value
+func Ptr[T any](v T) *T {
+	return &v
+}
+
+// Helper methods for checking limits
+func (c NumberInputConfig) hasMin() bool { return c.Min != nil }
+func (c NumberInputConfig) hasMax() bool { return c.Max != nil }
+func (c NumberInputConfig) minVal() int {
+	if c.Min != nil {
+		return *c.Min
+	}
+	return 0
+}
+func (c NumberInputConfig) maxVal() int {
+	if c.Max != nil {
+		return *c.Max
+	}
+	return 0
+}
+func (c NumberInputConfig) atMin() bool { return c.Min != nil && c.Value <= *c.Min }
+func (c NumberInputConfig) atMax() bool { return c.Max != nil && c.Value >= *c.Max }
 
 // adjustPath returns the base path for the adjust endpoint
 func (c NumberInputConfig) adjustPath() string {
@@ -70,6 +93,7 @@ templ NumberInput(cfg NumberInputConfig) {
 				font-weight: var(--font-weight-semibold);
 				text-align: center;
 				outline: none;
+				touch-action: manipulation;
 			}
 
 			.number-input-field::placeholder {
@@ -90,6 +114,7 @@ templ NumberInput(cfg NumberInputConfig) {
 				border-radius: var(--radius-sm);
 				cursor: pointer;
 				transition: var(--transition-fast);
+				touch-action: manipulation;
 			}
 
 			.number-input-btn:hover:not(:disabled) {
@@ -131,7 +156,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			type="button"
 			class="number-input-btn"
 			title="-5"
-			disabled?={ cfg.Readonly || cfg.Value <= cfg.Min }
+			disabled?={ cfg.Readonly || cfg.atMin() }
 			hx-on::before-request="adjustNumberInput(this, -5)"
 			hx-post={ cfg.adjustPath() + "?delta=-5" }
 			hx-target={ cfg.targetSelector() }
@@ -143,7 +168,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			type="button"
 			class="number-input-btn"
 			title="-1"
-			disabled?={ cfg.Readonly || cfg.Value <= cfg.Min }
+			disabled?={ cfg.Readonly || cfg.atMin() }
 			hx-on::before-request="adjustNumberInput(this, -1)"
 			hx-post={ cfg.adjustPath() + "?delta=-1" }
 			hx-target={ cfg.targetSelector() }
@@ -158,8 +183,12 @@ templ NumberInput(cfg NumberInputConfig) {
 			name={ cfg.Name }
 			value={ strconv.Itoa(cfg.Value) }
 			placeholder={ cfg.Placeholder }
-			min={ strconv.Itoa(cfg.Min) }
-			max={ strconv.Itoa(cfg.Max) }
+			if cfg.hasMin() {
+				min={ strconv.Itoa(cfg.minVal()) }
+			}
+			if cfg.hasMax() {
+				max={ strconv.Itoa(cfg.maxVal()) }
+			}
 			readonly?={ cfg.Readonly }
 			if !cfg.Readonly {
 				hx-post={ fmt.Sprintf("/api/status/%s/set", cfg.ID) }
@@ -171,7 +200,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			type="button"
 			class="number-input-btn"
 			title="+1"
-			disabled?={ cfg.Readonly || cfg.Value >= cfg.Max }
+			disabled?={ cfg.Readonly || cfg.atMax() }
 			hx-on::before-request="adjustNumberInput(this, 1)"
 			hx-post={ cfg.adjustPath() + "?delta=1" }
 			hx-target={ cfg.targetSelector() }
@@ -183,7 +212,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			type="button"
 			class="number-input-btn"
 			title="+5"
-			disabled?={ cfg.Readonly || cfg.Value >= cfg.Max }
+			disabled?={ cfg.Readonly || cfg.atMax() }
 			hx-on::before-request="adjustNumberInput(this, 5)"
 			hx-post={ cfg.adjustPath() + "?delta=5" }
 			hx-target={ cfg.targetSelector() }
