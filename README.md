@@ -2,6 +2,8 @@
 
 A TRPG character sheet management app built with Go, HTMX, and templ.
 
+> **For AI agents:** Read `agent.md` and `CONTRACT.md` before starting development.
+
 ## Tech Stack
 
 - **Go** - Backend server
