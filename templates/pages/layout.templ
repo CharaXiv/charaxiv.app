@@ -58,49 +58,208 @@ templ Layout(title string, headerActions templ.Component, content templ.Componen
 }
 
 templ liveReloadScript() {
+	<style>
+		#live-reload-indicator {
+			position: fixed;
+			bottom: 8px;
+			right: 8px;
+			z-index: 99999;
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			padding: 4px 8px;
+			border-radius: 4px;
+			font-size: 11px;
+			font-family: system-ui, sans-serif;
+			background: rgba(0, 0, 0, 0.7);
+			color: white;
+			transition: opacity 0.3s;
+			pointer-events: none;
+		}
+		#live-reload-indicator.hidden {
+			opacity: 0;
+		}
+		#live-reload-indicator .dot {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			background: currentColor;
+		}
+		#live-reload-indicator.connected { color: #4ade80; }
+		#live-reload-indicator.reconnecting { color: #facc15; }
+		#live-reload-indicator.failed { color: #f87171; }
+		#live-reload-indicator.reconnecting .dot {
+			animation: pulse 1s infinite;
+		}
+		@keyframes pulse {
+			0%, 100% { opacity: 1; }
+			50% { opacity: 0.3; }
+		}
+	</style>
+	<div id="live-reload-indicator" class="hidden">
+		<span class="dot"></span>
+		<span class="status">Connecting...</span>
+	</div>
 	<script>
 		(function() {
 			const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
 			const wsUrl = protocol + '//' + location.host + '/dev/subscribe';
+			
+			// State
+			let ws = null;
 			let connected = false;
-			let reloadPending = false;
-
+			let currentBuildID = null;
+			let reconnectAttempts = 0;
+			let lastHeartbeat = Date.now();
+			let heartbeatCheckInterval = null;
+			let reconnectTimeout = null;
+			let hideIndicatorTimeout = null;
+			
+			// Config
+			const MAX_RECONNECT_ATTEMPTS = 60;
+			const HEARTBEAT_TIMEOUT_MS = 15000; // Expect heartbeat every 5s, timeout after 15s
+			const BASE_RECONNECT_DELAY_MS = 100;
+			const MAX_RECONNECT_DELAY_MS = 5000;
+			
+			// UI
+			const indicator = document.getElementById('live-reload-indicator');
+			const statusText = indicator.querySelector('.status');
+			
+			function setStatus(state, text, autoHide = false) {
+				indicator.className = state;
+				statusText.textContent = text;
+				
+				if (hideIndicatorTimeout) {
+					clearTimeout(hideIndicatorTimeout);
+					hideIndicatorTimeout = null;
+				}
+				
+				if (autoHide) {
+					hideIndicatorTimeout = setTimeout(() => {
+						indicator.classList.add('hidden');
+					}, 2000);
+				}
+			}
+			
+			function getReconnectDelay() {
+				// Exponential backoff with jitter
+				const exponentialDelay = Math.min(
+					BASE_RECONNECT_DELAY_MS * Math.pow(2, reconnectAttempts),
+					MAX_RECONNECT_DELAY_MS
+				);
+				// Add jitter: ±25%
+				const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1);
+				return Math.round(exponentialDelay + jitter);
+			}
+			
+			function startHeartbeatCheck() {
+				stopHeartbeatCheck();
+				lastHeartbeat = Date.now();
+				heartbeatCheckInterval = setInterval(() => {
+					if (Date.now() - lastHeartbeat > HEARTBEAT_TIMEOUT_MS) {
+						console.log('[LiveReload] Heartbeat timeout, reconnecting...');
+						if (ws) {
+							ws.close();
+						}
+					}
+				}, 5000);
+			}
+			
+			function stopHeartbeatCheck() {
+				if (heartbeatCheckInterval) {
+					clearInterval(heartbeatCheckInterval);
+					heartbeatCheckInterval = null;
+				}
+			}
+			
+			function scheduleReconnect() {
+				if (reconnectTimeout) {
+					clearTimeout(reconnectTimeout);
+				}
+				
+				if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+					setStatus('failed', 'Connection failed');
+					console.log('[LiveReload] Max reconnection attempts reached');
+					return;
+				}
+				
+				const delay = getReconnectDelay();
+				reconnectAttempts++;
+				
+				setStatus('reconnecting', `Reconnecting (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+				console.log(`[LiveReload] Reconnecting in ${delay}ms (attempt ${reconnectAttempts})`);
+				
+				reconnectTimeout = setTimeout(connect, delay);
+			}
+			
 			function connect() {
+				if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+					return; // Already connecting/connected
+				}
+				
 				console.log('[LiveReload] Connecting to', wsUrl);
-				const ws = new WebSocket(wsUrl);
+				setStatus('reconnecting', 'Connecting...');
+				
+				ws = new WebSocket(wsUrl);
 				
 				ws.onopen = function() {
 					console.log('[LiveReload] Connected');
 					connected = true;
-					// If we reconnected after server restart, reload the page
-					if (reloadPending) {
-						console.log('[LiveReload] Server back up, reloading...');
-						location.reload();
-					}
+					reconnectAttempts = 0; // Reset on successful connection
+					startHeartbeatCheck();
+					setStatus('connected', 'Live reload active', true);
 				};
 				
 				ws.onmessage = function(event) {
-					if (event.data === 'reload') {
-						console.log('[LiveReload] Reload signal received');
+					const data = event.data;
+					
+					if (data === 'heartbeat') {
+						lastHeartbeat = Date.now();
+						return;
+					}
+					
+					if (data.startsWith('build:')) {
+						const serverBuildID = parseInt(data.slice(6), 10);
+						lastHeartbeat = Date.now();
+						
+						if (currentBuildID === null) {
+							// First connection, just record the build ID
+							currentBuildID = serverBuildID;
+							console.log('[LiveReload] Initial build ID:', currentBuildID);
+						} else if (serverBuildID > currentBuildID) {
+							// Server has newer build, reload
+							console.log('[LiveReload] Build ID changed:', currentBuildID, '->', serverBuildID, ', reloading...');
+							location.reload();
+						}
+						return;
+					}
+					
+					if (data.startsWith('reload:')) {
+						const newBuildID = parseInt(data.slice(7), 10);
+						console.log('[LiveReload] Reload signal received, build:', newBuildID);
 						location.reload();
+						return;
 					}
 				};
 				
-				ws.onclose = function() {
+				ws.onclose = function(event) {
+					stopHeartbeatCheck();
+					
 					if (connected) {
-						console.log('[LiveReload] Connection lost, waiting for server...');
+						console.log('[LiveReload] Connection lost, will reconnect...');
 						connected = false;
-						reloadPending = true;
 					}
-					// Try to reconnect after a delay
-					setTimeout(connect, 1000);
+					
+					scheduleReconnect();
 				};
 				
-				ws.onerror = function() {
+				ws.onerror = function(error) {
 					// Error will trigger onclose
+					console.log('[LiveReload] WebSocket error');
 				};
 			}
 			
+			// Start connection
 			connect();
 		})();
 	</script>

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,11 +19,18 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+// buildID increments on each reload to help clients detect stale connections
+var buildID atomic.Uint64
+
 func reloader(wg *sync.WaitGroup, sigCh <-chan os.Signal) {
 	defer wg.Done()
 
-	targets := make(map[string]chan bool)
+	targets := make(map[string]chan string)
 	var mu sync.Mutex
+
+	// Debounce reload requests
+	var reloadDebounce *time.Timer
+	var debounceMu sync.Mutex
 
 	mux := http.NewServeMux()
 
@@ -36,7 +44,7 @@ func reloader(wg *sync.WaitGroup, sigCh <-chan os.Signal) {
 
 		fmt.Printf("%s[RELOADER] Browser connected...%s\n", colorBlue, colorReset)
 		id := uuid.New().String()
-		ch := make(chan bool, 1)
+		ch := make(chan string, 1)
 
 		mu.Lock()
 		targets[id] = ch
@@ -49,18 +57,32 @@ func reloader(wg *sync.WaitGroup, sigCh <-chan os.Signal) {
 			close(ch)
 		}()
 
-		// Ping ticker to keep connection alive
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
+		// Send initial build ID so client knows current version
+		initialMsg := fmt.Sprintf("build:%d", buildID.Load())
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(initialMsg)); err != nil {
+			return
+		}
+
+		// Heartbeat ticker - sends heartbeat every 5 seconds
+		heartbeatTicker := time.NewTicker(5 * time.Second)
+		defer heartbeatTicker.Stop()
+
+		// Ping ticker to keep connection alive at protocol level
+		pingTicker := time.NewTicker(30 * time.Second)
+		defer pingTicker.Stop()
 
 		for {
 			select {
-			case <-ch:
-				fmt.Printf("%s[RELOADER] Notifying browser to reload...%s\n", colorBlue, colorReset)
-				if err := conn.WriteMessage(websocket.TextMessage, []byte("reload")); err != nil {
+			case msg := <-ch:
+				fmt.Printf("%s[RELOADER] Notifying browser: %s%s\n", colorBlue, msg, colorReset)
+				if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
 					return
 				}
-			case <-ticker.C:
+			case <-heartbeatTicker.C:
+				if err := conn.WriteMessage(websocket.TextMessage, []byte("heartbeat")); err != nil {
+					return
+				}
+			case <-pingTicker.C:
 				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 					return
 				}
@@ -69,36 +91,28 @@ func reloader(wg *sync.WaitGroup, sigCh <-chan os.Signal) {
 	})
 
 	mux.HandleFunc("/reload", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("%s[RELOADER] Reload requested, polling server...%s\n", colorBlue, colorReset)
+		// Debounce: if another reload comes within 100ms, reset the timer
+		debounceMu.Lock()
+		if reloadDebounce != nil {
+			reloadDebounce.Stop()
+		}
 
-		client := http.Client{Timeout: 1 * time.Second}
-		ticker := time.NewTicker(100 * time.Millisecond)
-		defer ticker.Stop()
-
-		// Poll the main server's health endpoint until it responds
-		for {
+		done := make(chan bool, 1)
+		reloadDebounce = time.AfterFunc(100*time.Millisecond, func() {
+			performReload(&mu, targets)
 			select {
-			case <-ticker.C:
-				resp, err := client.Get("http://localhost:8000/health")
-				if err != nil {
-					continue
-				}
-				resp.Body.Close()
-
-				if resp.StatusCode == 200 {
-					fmt.Printf("%s[RELOADER] Server is ready, notifying browsers...%s\n", colorBlue, colorReset)
-					mu.Lock()
-					for _, target := range targets {
-						select {
-						case target <- true:
-						default:
-						}
-					}
-					mu.Unlock()
-					w.WriteHeader(http.StatusOK)
-					return
-				}
+			case done <- true:
+			default:
 			}
+		})
+		debounceMu.Unlock()
+
+		// Wait for debounced reload to complete (with timeout)
+		select {
+		case <-done:
+			w.WriteHeader(http.StatusOK)
+		case <-time.After(35 * time.Second):
+			http.Error(w, "reload timeout", http.StatusGatewayTimeout)
 		}
 	})
 
@@ -120,4 +134,47 @@ func reloader(wg *sync.WaitGroup, sigCh <-chan os.Signal) {
 	server.Shutdown(ctx)
 
 	fmt.Printf("%s[RELOADER] Shutdown complete%s\n", colorBlue, colorReset)
+}
+
+func performReload(mu *sync.Mutex, targets map[string]chan string) {
+	fmt.Printf("%s[RELOADER] Reload requested, polling server...%s\n", colorBlue, colorReset)
+
+	client := http.Client{Timeout: 1 * time.Second}
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	// 30 second timeout for health check polling
+	timeout := time.After(30 * time.Second)
+
+	// Poll the main server's health endpoint until it responds
+	for {
+		select {
+		case <-timeout:
+			fmt.Printf("%s[RELOADER] Timeout waiting for server health%s\n", colorRed, colorReset)
+			return
+		case <-ticker.C:
+			resp, err := client.Get("http://localhost:8000/health")
+			if err != nil {
+				continue
+			}
+			resp.Body.Close()
+
+			if resp.StatusCode == 200 {
+				// Increment build ID
+				newBuildID := buildID.Add(1)
+				fmt.Printf("%s[RELOADER] Server is ready (build %d), notifying browsers...%s\n", colorBlue, newBuildID, colorReset)
+
+				msg := fmt.Sprintf("reload:%d", newBuildID)
+				mu.Lock()
+				for _, target := range targets {
+					select {
+					case target <- msg:
+					default:
+					}
+				}
+				mu.Unlock()
+				return
+			}
+		}
+	}
 }
