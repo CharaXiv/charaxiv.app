@@ -140,13 +140,12 @@ func SkillCategoryOrder(cat SkillCategory) int {
 
 // Cthulhu6Skill represents a single skill
 type Cthulhu6Skill struct {
-	Category SkillCategory `json:"category"`
-	Job      int           `json:"job"`
-	Hobby    int           `json:"hobby"`
-	Perm     int           `json:"perm"`
-	Temp     int           `json:"temp"`
-	Grow     bool          `json:"grow"`
-	Order    int           `json:"order"` // order within category
+	Job   int  `json:"job"`
+	Hobby int  `json:"hobby"`
+	Perm  int  `json:"perm"`
+	Temp  int  `json:"temp"`
+	Grow  bool `json:"grow"`
+	Order int  `json:"order"` // order within category
 }
 
 // Sum returns total allocated points
@@ -160,92 +159,116 @@ type Cthulhu6SkillExtra struct {
 	Hobby int `json:"hobby"`
 }
 
-// Cthulhu6Skills represents all skills for a character
-type Cthulhu6Skills struct {
+// Cthulhu6SkillCategoryData represents a category of skills
+type Cthulhu6SkillCategoryData struct {
 	Skills map[string]Cthulhu6Skill `json:"skills"`
-	Extra  Cthulhu6SkillExtra       `json:"extra"`
+	Order  int                      `json:"order"`
 }
 
-// skill is a helper to create a skill with category
-func skill(cat SkillCategory, order int) Cthulhu6Skill {
-	return Cthulhu6Skill{Category: cat, Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: order}
+// Cthulhu6Skills represents all skills for a character
+type Cthulhu6Skills struct {
+	Categories map[SkillCategory]Cthulhu6SkillCategoryData `json:"categories"`
+	Custom     []Cthulhu6Skill                             `json:"custom"`
+	Extra      Cthulhu6SkillExtra                          `json:"extra"`
+}
+
+// skill is a helper to create a skill
+func skill(order int) Cthulhu6Skill {
+	return Cthulhu6Skill{Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: order}
 }
 
 // NewCthulhu6Skills creates skills with default values
 func NewCthulhu6Skills() *Cthulhu6Skills {
 	return &Cthulhu6Skills{
-		Skills: map[string]Cthulhu6Skill{
-			// 戦闘技能 (Combat Skills)
-			"回避":       skill(SkillCategoryCombat, 0),
-			"キック":      skill(SkillCategoryCombat, 1),
-			"組み付き":     skill(SkillCategoryCombat, 2),
-			"こぶし":      skill(SkillCategoryCombat, 3),
-			"頭突き":      skill(SkillCategoryCombat, 4),
-			"投擲":       skill(SkillCategoryCombat, 5),
-			"マーシャルアーツ": skill(SkillCategoryCombat, 6),
-			"拳銃":       skill(SkillCategoryCombat, 7),
-			"サブマシンガン":  skill(SkillCategoryCombat, 8),
-			"ショットガン":   skill(SkillCategoryCombat, 9),
-			"マシンガン":    skill(SkillCategoryCombat, 10),
-			"ライフル":     skill(SkillCategoryCombat, 11),
-
-			// 探索技能 (Investigation Skills)
-			"目星":    skill(SkillCategoryInvestigation, 0),
-			"聞き耳":   skill(SkillCategoryInvestigation, 1),
-			"図書館":   skill(SkillCategoryInvestigation, 2),
-			"応急手当":  skill(SkillCategoryInvestigation, 3),
-			"隠れる":   skill(SkillCategoryInvestigation, 4),
-			"隠す":    skill(SkillCategoryInvestigation, 5),
-			"変装":    skill(SkillCategoryInvestigation, 6),
-			"忍び歩き":  skill(SkillCategoryInvestigation, 7),
-			"追跡":    skill(SkillCategoryInvestigation, 8),
-			"ナビゲート": skill(SkillCategoryInvestigation, 9),
-			"写真術":   skill(SkillCategoryInvestigation, 10),
-			"鍵開け":   skill(SkillCategoryInvestigation, 11),
-			"精神分析":  skill(SkillCategoryInvestigation, 12),
-
-			// 行動技能 (Action Skills)
-			"登攀":    skill(SkillCategoryAction, 0),
-			"跳躍":    skill(SkillCategoryAction, 1),
-			"運転":    skill(SkillCategoryAction, 2),
-			"操縦":    skill(SkillCategoryAction, 3),
-			"重機械操作": skill(SkillCategoryAction, 4),
-			"機械修理":  skill(SkillCategoryAction, 5),
-			"電気修理":  skill(SkillCategoryAction, 6),
-			"製作":    skill(SkillCategoryAction, 7),
-			"芸術":    skill(SkillCategoryAction, 8),
-			"乗馬":    skill(SkillCategoryAction, 9),
-			"水泳":    skill(SkillCategoryAction, 10),
-
-			// 交渉技能 (Social Skills)
-			"言いくるめ": skill(SkillCategorySocial, 0),
-			"信用":    skill(SkillCategorySocial, 1),
-			"説得":    skill(SkillCategorySocial, 2),
-			"値切り":   skill(SkillCategorySocial, 3),
-
-			// 知識技能 (Knowledge Skills)
-			"クトゥルフ神話": skill(SkillCategoryKnowledge, 0),
-			"心理学":     skill(SkillCategoryKnowledge, 1),
-			"母国語":     skill(SkillCategoryKnowledge, 2),
-			"ほかの言語":   skill(SkillCategoryKnowledge, 3),
-			"オカルト":    skill(SkillCategoryKnowledge, 4),
-			"歴史":      skill(SkillCategoryKnowledge, 5),
-			"法律":      skill(SkillCategoryKnowledge, 6),
-			"経理":      skill(SkillCategoryKnowledge, 7),
-			"人類学":     skill(SkillCategoryKnowledge, 8),
-			"考古学":     skill(SkillCategoryKnowledge, 9),
-			"博物学":     skill(SkillCategoryKnowledge, 10),
-			"医学":      skill(SkillCategoryKnowledge, 11),
-			"薬学":      skill(SkillCategoryKnowledge, 12),
-			"生物学":     skill(SkillCategoryKnowledge, 13),
-			"化学":      skill(SkillCategoryKnowledge, 14),
-			"コンピューター": skill(SkillCategoryKnowledge, 15),
-			"電子工学":    skill(SkillCategoryKnowledge, 16),
-			"物理学":     skill(SkillCategoryKnowledge, 17),
-			"天文学":     skill(SkillCategoryKnowledge, 18),
-			"地質学":     skill(SkillCategoryKnowledge, 19),
+		Categories: map[SkillCategory]Cthulhu6SkillCategoryData{
+			SkillCategoryCombat: {
+				Order: 0,
+				Skills: map[string]Cthulhu6Skill{
+					"回避":       skill(0),
+					"キック":      skill(1),
+					"組み付き":     skill(2),
+					"こぶし":      skill(3),
+					"頭突き":      skill(4),
+					"投擲":       skill(5),
+					"マーシャルアーツ": skill(6),
+					"拳銃":       skill(7),
+					"サブマシンガン":  skill(8),
+					"ショットガン":   skill(9),
+					"マシンガン":    skill(10),
+					"ライフル":     skill(11),
+				},
+			},
+			SkillCategoryInvestigation: {
+				Order: 1,
+				Skills: map[string]Cthulhu6Skill{
+					"目星":    skill(0),
+					"聞き耳":   skill(1),
+					"図書館":   skill(2),
+					"応急手当":  skill(3),
+					"隠れる":   skill(4),
+					"隠す":    skill(5),
+					"変装":    skill(6),
+					"忍び歩き":  skill(7),
+					"追跡":    skill(8),
+					"ナビゲート": skill(9),
+					"写真術":   skill(10),
+					"鍵開け":   skill(11),
+					"精神分析":  skill(12),
+				},
+			},
+			SkillCategoryAction: {
+				Order: 2,
+				Skills: map[string]Cthulhu6Skill{
+					"登攀":    skill(0),
+					"跳躍":    skill(1),
+					"運転":    skill(2),
+					"操縦":    skill(3),
+					"重機械操作": skill(4),
+					"機械修理":  skill(5),
+					"電気修理":  skill(6),
+					"製作":    skill(7),
+					"芸術":    skill(8),
+					"乗馬":    skill(9),
+					"水泳":    skill(10),
+				},
+			},
+			SkillCategorySocial: {
+				Order: 3,
+				Skills: map[string]Cthulhu6Skill{
+					"言いくるめ": skill(0),
+					"信用":    skill(1),
+					"説得":    skill(2),
+					"値切り":   skill(3),
+				},
+			},
+			SkillCategoryKnowledge: {
+				Order: 4,
+				Skills: map[string]Cthulhu6Skill{
+					"クトゥルフ神話": skill(0),
+					"心理学":     skill(1),
+					"母国語":     skill(2),
+					"ほかの言語":   skill(3),
+					"オカルト":    skill(4),
+					"歴史":      skill(5),
+					"法律":      skill(6),
+					"経理":      skill(7),
+					"人類学":     skill(8),
+					"考古学":     skill(9),
+					"博物学":     skill(10),
+					"医学":      skill(11),
+					"薬学":      skill(12),
+					"生物学":     skill(13),
+					"化学":      skill(14),
+					"コンピューター": skill(15),
+					"電子工学":    skill(16),
+					"物理学":     skill(17),
+					"天文学":     skill(18),
+					"地質学":     skill(19),
+				},
+			},
 		},
-		Extra: Cthulhu6SkillExtra{Job: 0, Hobby: 0},
+		Custom: []Cthulhu6Skill{},
+		Extra:  Cthulhu6SkillExtra{Job: 0, Hobby: 0},
 	}
 }
 
@@ -292,7 +315,13 @@ func (s *Cthulhu6Status) RemainingPoints(skills *Cthulhu6Skills) (job int, hobby
 
 	usedJob := 0
 	usedHobby := 0
-	for _, skill := range skills.Skills {
+	for _, catData := range skills.Categories {
+		for _, skill := range catData.Skills {
+			usedJob += skill.Job
+			usedHobby += skill.Hobby
+		}
+	}
+	for _, skill := range skills.Custom {
 		usedJob += skill.Job
 		usedHobby += skill.Hobby
 	}

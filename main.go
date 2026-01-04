@@ -108,7 +108,7 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 		})
 	}
 
-	// Skills - group by category
+	// Skills - build from categories
 	categoryOrder := []models.SkillCategory{
 		models.SkillCategoryCombat,
 		models.SkillCategoryInvestigation,
@@ -117,27 +117,23 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 		models.SkillCategoryKnowledge,
 	}
 
-	// Build skills per category
-	categorySkills := make(map[models.SkillCategory][]shared.Skill)
-	for key, s := range skills.Skills {
-		skill := shared.Skill{
-			Key:      key,
-			Category: string(s.Category),
-			Init:     status.SkillInitialValue(key),
-			Job:      s.Job,
-			Hobby:    s.Hobby,
-			Perm:     s.Perm,
-			Temp:     s.Temp,
-			Grow:     s.Grow,
-			Order:    s.Order,
-		}
-		categorySkills[s.Category] = append(categorySkills[s.Category], skill)
-	}
-
-	// Sort skills within each category and build result
 	skillCategories := make([]shared.SkillCategory, 0, len(categoryOrder))
 	for _, cat := range categoryOrder {
-		skillsInCat := categorySkills[cat]
+		catData := skills.Categories[cat]
+		skillsInCat := make([]shared.Skill, 0, len(catData.Skills))
+		for key, s := range catData.Skills {
+			skillsInCat = append(skillsInCat, shared.Skill{
+				Key:      key,
+				Category: string(cat),
+				Init:     status.SkillInitialValue(key),
+				Job:      s.Job,
+				Hobby:    s.Hobby,
+				Perm:     s.Perm,
+				Temp:     s.Temp,
+				Grow:     s.Grow,
+				Order:    s.Order,
+			})
+		}
 		sort.Slice(skillsInCat, func(i, j int) bool {
 			return skillsInCat[i].Order < skillsInCat[j].Order
 		})
@@ -450,7 +446,7 @@ func main() {
 		// Build the skill for template
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		updatedSkill := skills.Skills[key]
+		updatedSkill, _ := charStore.GetSkill(key)
 		remJob, remHobby := status.RemainingPoints(skills)
 
 		templSkill := shared.Skill{

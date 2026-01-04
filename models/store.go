@@ -130,17 +130,27 @@ func (s *Store) SetSkillExtra(job, hobby int) {
 	s.skills.Extra.Hobby = hobby
 }
 
-// UpdateSkill updates a skill's values
+// UpdateSkill updates a skill's values (searches all categories)
 func (s *Store) UpdateSkill(key string, skill Cthulhu6Skill) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.skills.Skills[key] = skill
+	for cat, catData := range s.skills.Categories {
+		if _, ok := catData.Skills[key]; ok {
+			catData.Skills[key] = skill
+			s.skills.Categories[cat] = catData
+			return
+		}
+	}
 }
 
-// GetSkill returns a skill by key
+// GetSkill returns a skill by key (searches all categories)
 func (s *Store) GetSkill(key string) (Cthulhu6Skill, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	skill, ok := s.skills.Skills[key]
-	return skill, ok
+	for _, catData := range s.skills.Categories {
+		if skill, ok := catData.Skills[key]; ok {
+			return skill, true
+		}
+	}
+	return Cthulhu6Skill{}, false
 }
