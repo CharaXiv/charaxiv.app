@@ -47,7 +47,7 @@ func buildPageContext(store *models.Store) shared.PageContext {
 
 // buildSheetState creates a SheetState from model data and page context
 func buildSheetState(pc shared.PageContext, status *models.Cthulhu6Status, skills *models.Cthulhu6Skills) shared.SheetState {
-	vars, computed, params, db, skillList, skillExtra, skillPoints := statusToTemplates(status, skills)
+	vars, computed, params, db, skillCategories, skillExtra, skillPoints := statusToTemplates(status, skills)
 	return shared.SheetState{
 		PC: pc,
 		Status: shared.StatusState{
@@ -57,15 +57,15 @@ func buildSheetState(pc shared.PageContext, status *models.Cthulhu6Status, skill
 			DamageBonus: db,
 		},
 		Skills: shared.SkillsState{
-			Items:     skillList,
-			Extra:     skillExtra,
-			Remaining: skillPoints,
+			Categories: skillCategories,
+			Extra:      skillExtra,
+			Remaining:  skillPoints,
 		},
 	}
 }
 
 // statusToTemplates converts model status to template types
-func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Skills) ([]shared.StatusVariable, []shared.ComputedValue, []shared.StatusParameter, string, []shared.Skill, shared.SkillExtra, shared.SkillPoints) {
+func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Skills) ([]shared.StatusVariable, []shared.ComputedValue, []shared.StatusParameter, string, []shared.SkillCategory, shared.SkillExtra, shared.SkillPoints) {
 	// Variables in display order
 	varOrder := []string{"STR", "CON", "POW", "DEX", "APP", "SIZ", "INT", "EDU"}
 	variables := make([]shared.StatusVariable, 0, len(varOrder))
@@ -108,24 +108,44 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 		})
 	}
 
-	// Skills
-	skillList := make([]shared.Skill, 0, len(skills.Skills))
+	// Skills - group by category
+	categoryOrder := []models.SkillCategory{
+		models.SkillCategoryCombat,
+		models.SkillCategoryInvestigation,
+		models.SkillCategoryAction,
+		models.SkillCategorySocial,
+		models.SkillCategoryKnowledge,
+	}
+
+	// Build skills per category
+	categorySkills := make(map[models.SkillCategory][]shared.Skill)
 	for key, s := range skills.Skills {
-		skillList = append(skillList, shared.Skill{
-			Key:   key,
-			Init:  status.SkillInitialValue(key),
-			Job:   s.Job,
-			Hobby: s.Hobby,
-			Perm:  s.Perm,
-			Temp:  s.Temp,
-			Grow:  s.Grow,
-			Order: s.Order,
+		skill := shared.Skill{
+			Key:      key,
+			Category: string(s.Category),
+			Init:     status.SkillInitialValue(key),
+			Job:      s.Job,
+			Hobby:    s.Hobby,
+			Perm:     s.Perm,
+			Temp:     s.Temp,
+			Grow:     s.Grow,
+			Order:    s.Order,
+		}
+		categorySkills[s.Category] = append(categorySkills[s.Category], skill)
+	}
+
+	// Sort skills within each category and build result
+	skillCategories := make([]shared.SkillCategory, 0, len(categoryOrder))
+	for _, cat := range categoryOrder {
+		skillsInCat := categorySkills[cat]
+		sort.Slice(skillsInCat, func(i, j int) bool {
+			return skillsInCat[i].Order < skillsInCat[j].Order
+		})
+		skillCategories = append(skillCategories, shared.SkillCategory{
+			Name:   string(cat),
+			Skills: skillsInCat,
 		})
 	}
-	// Sort by order
-	sort.Slice(skillList, func(i, j int) bool {
-		return skillList[i].Order < skillList[j].Order
-	})
 
 	skillExtra := shared.SkillExtra{
 		Job:   skills.Extra.Job,
@@ -138,7 +158,7 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 		Hobby: remHobby,
 	}
 
-	return variables, computed, parameters, status.DamageBonus(), skillList, skillExtra, skillPoints
+	return variables, computed, parameters, status.DamageBonus(), skillCategories, skillExtra, skillPoints
 }
 
 // proxyWebSocket proxies a WebSocket connection to the target host.

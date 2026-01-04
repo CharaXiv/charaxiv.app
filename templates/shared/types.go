@@ -50,14 +50,15 @@ type SkillExtra struct {
 
 // Skill represents a single skill with its point allocations
 type Skill struct {
-	Key   string // skill key/name
-	Init  int    // initial value (from character stats)
-	Job   int    // occupation points allocated
-	Hobby int    // hobby points allocated
-	Perm  int    // permanent increase
-	Temp  int    // temporary increase
-	Grow  bool   // marked for growth check
-	Order int    // display order
+	Key      string // skill key/name
+	Category string // skill category (e.g., "戦闘技能")
+	Init     int    // initial value (from character stats)
+	Job      int    // occupation points allocated
+	Hobby    int    // hobby points allocated
+	Perm     int    // permanent increase
+	Temp     int    // temporary increase
+	Grow     bool   // marked for growth check
+	Order    int    // display order within category
 }
 
 // Total returns the total skill value (init + all bonuses)
@@ -78,11 +79,17 @@ type StatusState struct {
 	DamageBonus string
 }
 
+// SkillCategory represents a group of skills
+type SkillCategory struct {
+	Name   string  // category name (e.g., "戦闘技能")
+	Skills []Skill // skills in this category, sorted by order
+}
+
 // SkillsState holds all skills-related data for rendering
 type SkillsState struct {
-	Items     []Skill
-	Extra     SkillExtra
-	Remaining SkillPoints
+	Categories []SkillCategory // categories in display order
+	Extra      SkillExtra
+	Remaining  SkillPoints
 }
 
 // SheetState holds all data needed to render a character sheet

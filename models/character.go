@@ -109,14 +109,44 @@ func (s *Cthulhu6Status) EffectiveParameter(key string) int {
 	return s.DefaultParameters()[key]
 }
 
+// SkillCategory represents a skill category
+type SkillCategory string
+
+const (
+	SkillCategoryCombat        SkillCategory = "戦闘技能"
+	SkillCategoryInvestigation SkillCategory = "探索技能"
+	SkillCategoryAction        SkillCategory = "行動技能"
+	SkillCategorySocial        SkillCategory = "交渉技能"
+	SkillCategoryKnowledge     SkillCategory = "知識技能"
+)
+
+// SkillCategoryOrder returns the display order for a category
+func SkillCategoryOrder(cat SkillCategory) int {
+	switch cat {
+	case SkillCategoryCombat:
+		return 0
+	case SkillCategoryInvestigation:
+		return 1
+	case SkillCategoryAction:
+		return 2
+	case SkillCategorySocial:
+		return 3
+	case SkillCategoryKnowledge:
+		return 4
+	default:
+		return 99
+	}
+}
+
 // Cthulhu6Skill represents a single skill
 type Cthulhu6Skill struct {
-	Job   int  `json:"job"`
-	Hobby int  `json:"hobby"`
-	Perm  int  `json:"perm"`
-	Temp  int  `json:"temp"`
-	Grow  bool `json:"grow"`
-	Order int  `json:"order"`
+	Category SkillCategory `json:"category"`
+	Job      int           `json:"job"`
+	Hobby    int           `json:"hobby"`
+	Perm     int           `json:"perm"`
+	Temp     int           `json:"temp"`
+	Grow     bool          `json:"grow"`
+	Order    int           `json:"order"` // order within category
 }
 
 // Sum returns total allocated points
@@ -136,79 +166,84 @@ type Cthulhu6Skills struct {
 	Extra  Cthulhu6SkillExtra       `json:"extra"`
 }
 
+// skill is a helper to create a skill with category
+func skill(cat SkillCategory, order int) Cthulhu6Skill {
+	return Cthulhu6Skill{Category: cat, Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: order}
+}
+
 // NewCthulhu6Skills creates skills with default values
 func NewCthulhu6Skills() *Cthulhu6Skills {
 	return &Cthulhu6Skills{
 		Skills: map[string]Cthulhu6Skill{
-			// 戦闘技能 (Combat Skills) - Order 0-11
-			"回避":       {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 0},
-			"キック":      {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 1},
-			"組み付き":     {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 2},
-			"こぶし":      {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 3},
-			"頭突き":      {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 4},
-			"投擲":       {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 5},
-			"マーシャルアーツ": {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 6},
-			"拳銃":       {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 7},
-			"サブマシンガン":  {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 8},
-			"ショットガン":   {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 9},
-			"マシンガン":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 10},
-			"ライフル":     {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 11},
+			// 戦闘技能 (Combat Skills)
+			"回避":       skill(SkillCategoryCombat, 0),
+			"キック":      skill(SkillCategoryCombat, 1),
+			"組み付き":     skill(SkillCategoryCombat, 2),
+			"こぶし":      skill(SkillCategoryCombat, 3),
+			"頭突き":      skill(SkillCategoryCombat, 4),
+			"投擲":       skill(SkillCategoryCombat, 5),
+			"マーシャルアーツ": skill(SkillCategoryCombat, 6),
+			"拳銃":       skill(SkillCategoryCombat, 7),
+			"サブマシンガン":  skill(SkillCategoryCombat, 8),
+			"ショットガン":   skill(SkillCategoryCombat, 9),
+			"マシンガン":    skill(SkillCategoryCombat, 10),
+			"ライフル":     skill(SkillCategoryCombat, 11),
 
-			// 探索技能 (Investigation Skills) - Order 12-24
-			"目星":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 12},
-			"聞き耳":   {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 13},
-			"図書館":   {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 14},
-			"応急手当":  {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 15},
-			"隠れる":   {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 16},
-			"隠す":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 17},
-			"変装":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 18},
-			"忍び歩き":  {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 19},
-			"追跡":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 20},
-			"ナビゲート": {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 21},
-			"写真術":   {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 22},
-			"鍵開け":   {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 23},
-			"精神分析":  {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 24},
+			// 探索技能 (Investigation Skills)
+			"目星":    skill(SkillCategoryInvestigation, 0),
+			"聞き耳":   skill(SkillCategoryInvestigation, 1),
+			"図書館":   skill(SkillCategoryInvestigation, 2),
+			"応急手当":  skill(SkillCategoryInvestigation, 3),
+			"隠れる":   skill(SkillCategoryInvestigation, 4),
+			"隠す":    skill(SkillCategoryInvestigation, 5),
+			"変装":    skill(SkillCategoryInvestigation, 6),
+			"忍び歩き":  skill(SkillCategoryInvestigation, 7),
+			"追跡":    skill(SkillCategoryInvestigation, 8),
+			"ナビゲート": skill(SkillCategoryInvestigation, 9),
+			"写真術":   skill(SkillCategoryInvestigation, 10),
+			"鍵開け":   skill(SkillCategoryInvestigation, 11),
+			"精神分析":  skill(SkillCategoryInvestigation, 12),
 
-			// 行動技能 (Action Skills) - Order 25-35
-			"登攀":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 25},
-			"跳躍":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 26},
-			"運転":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 27},
-			"操縦":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 28},
-			"重機械操作": {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 29},
-			"機械修理":  {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 30},
-			"電気修理":  {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 31},
-			"製作":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 32},
-			"芸術":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 33},
-			"乗馬":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 34},
-			"水泳":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 35},
+			// 行動技能 (Action Skills)
+			"登攀":    skill(SkillCategoryAction, 0),
+			"跳躍":    skill(SkillCategoryAction, 1),
+			"運転":    skill(SkillCategoryAction, 2),
+			"操縦":    skill(SkillCategoryAction, 3),
+			"重機械操作": skill(SkillCategoryAction, 4),
+			"機械修理":  skill(SkillCategoryAction, 5),
+			"電気修理":  skill(SkillCategoryAction, 6),
+			"製作":    skill(SkillCategoryAction, 7),
+			"芸術":    skill(SkillCategoryAction, 8),
+			"乗馬":    skill(SkillCategoryAction, 9),
+			"水泳":    skill(SkillCategoryAction, 10),
 
-			// 交渉技能 (Social Skills) - Order 36-39
-			"言いくるめ": {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 36},
-			"信用":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 37},
-			"説得":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 38},
-			"値切り":   {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 39},
+			// 交渉技能 (Social Skills)
+			"言いくるめ": skill(SkillCategorySocial, 0),
+			"信用":    skill(SkillCategorySocial, 1),
+			"説得":    skill(SkillCategorySocial, 2),
+			"値切り":   skill(SkillCategorySocial, 3),
 
-			// 知識技能 (Knowledge Skills) - Order 40-59
-			"クトゥルフ神話": {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 40},
-			"心理学":     {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 41},
-			"母国語":     {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 42},
-			"ほかの言語":   {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 43},
-			"オカルト":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 44},
-			"歴史":      {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 45},
-			"法律":      {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 46},
-			"経理":      {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 47},
-			"人類学":     {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 48},
-			"考古学":     {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 49},
-			"博物学":     {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 50},
-			"医学":      {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 51},
-			"薬学":      {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 52},
-			"生物学":     {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 53},
-			"化学":      {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 54},
-			"コンピューター": {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 55},
-			"電子工学":    {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 56},
-			"物理学":     {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 57},
-			"天文学":     {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 58},
-			"地質学":     {Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: 59},
+			// 知識技能 (Knowledge Skills)
+			"クトゥルフ神話": skill(SkillCategoryKnowledge, 0),
+			"心理学":     skill(SkillCategoryKnowledge, 1),
+			"母国語":     skill(SkillCategoryKnowledge, 2),
+			"ほかの言語":   skill(SkillCategoryKnowledge, 3),
+			"オカルト":    skill(SkillCategoryKnowledge, 4),
+			"歴史":      skill(SkillCategoryKnowledge, 5),
+			"法律":      skill(SkillCategoryKnowledge, 6),
+			"経理":      skill(SkillCategoryKnowledge, 7),
+			"人類学":     skill(SkillCategoryKnowledge, 8),
+			"考古学":     skill(SkillCategoryKnowledge, 9),
+			"博物学":     skill(SkillCategoryKnowledge, 10),
+			"医学":      skill(SkillCategoryKnowledge, 11),
+			"薬学":      skill(SkillCategoryKnowledge, 12),
+			"生物学":     skill(SkillCategoryKnowledge, 13),
+			"化学":      skill(SkillCategoryKnowledge, 14),
+			"コンピューター": skill(SkillCategoryKnowledge, 15),
+			"電子工学":    skill(SkillCategoryKnowledge, 16),
+			"物理学":     skill(SkillCategoryKnowledge, 17),
+			"天文学":     skill(SkillCategoryKnowledge, 18),
+			"地質学":     skill(SkillCategoryKnowledge, 19),
 		},
 		Extra: Cthulhu6SkillExtra{Job: 0, Hobby: 0},
 	}

@@ -137,6 +137,24 @@ templ SkillsPanelContent(state SheetState) {
 				overflow: hidden;
 			}
 
+			/* Skills category */
+			.skills-category {
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-2);
+			}
+
+			.skills-category-title {
+				font-size: var(--font-size-sm);
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-500);
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+				padding: var(--space-2) 0;
+				border-bottom: 1px solid var(--slate-200);
+				margin-bottom: var(--space-1);
+			}
+
 			/* Skills list */
 			.skills-list {
 				display: flex;
@@ -285,11 +303,16 @@ templ SkillsPanelContent(state SheetState) {
 			<h2 class="skills-title">技能</h2>
 		</div>
 		@ExtraPointsForm(state.PC, state.Skills.Extra)
-		<div class="skills-list">
-			for _, skill := range state.Skills.Items {
-				@SkillRow(state.PC, skill, state.Skills.Remaining)
-			}
-		</div>
+		for _, category := range state.Skills.Categories {
+			<div class="skills-category">
+				<h3 class="skills-category-title">{ category.Name }</h3>
+				<div class="skills-list">
+					for _, skill := range category.Skills {
+						@SkillRow(state.PC, skill, state.Skills.Remaining)
+					}
+				</div>
+			</div>
+		}
 	</div>
 }
 
