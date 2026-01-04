@@ -45,6 +45,25 @@ func buildPageContext(store *models.Store) shared.PageContext {
 	return ctx
 }
 
+// buildSheetState creates a SheetState from model data and page context
+func buildSheetState(pc shared.PageContext, status *models.Cthulhu6Status, skills *models.Cthulhu6Skills) shared.SheetState {
+	vars, computed, params, db, skillList, skillExtra, skillPoints := statusToTemplates(status, skills)
+	return shared.SheetState{
+		PC: pc,
+		Status: shared.StatusState{
+			Variables:   vars,
+			Computed:    computed,
+			Parameters:  params,
+			DamageBonus: db,
+		},
+		Skills: shared.SkillsState{
+			Items:     skillList,
+			Extra:     skillExtra,
+			Remaining: skillPoints,
+		},
+	}
+}
+
 // statusToTemplates converts model status to template types
 func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Skills) ([]shared.StatusVariable, []shared.ComputedValue, []shared.StatusParameter, string, []shared.Skill, shared.SkillExtra, shared.SkillPoints) {
 	// Variables in display order
@@ -248,11 +267,11 @@ func main() {
 
 	// Character sheet
 	r.Get("/", HTML(func(r *http.Request) templ.Component {
-		ctx := buildPageContext(charStore)
+		pc := buildPageContext(charStore)
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		vars, computed, params, db, skillList, skillExtra, skillPoints := statusToTemplates(status, skills)
-		return pages.CharacterSheet(ctx, vars, computed, params, db, skillList, skillExtra, skillPoints)
+		state := buildSheetState(pc, status, skills)
+		return pages.CharacterSheet(state)
 	}))
 
 	// Preview mode toggle - returns targeted fragments with OOB swaps
@@ -317,17 +336,17 @@ func main() {
 		}
 
 		// Return the full status panel
-		ctx := shared.NewPageContext()
+		pc := shared.NewPageContext()
 		status = charStore.GetStatus()
 		skills := charStore.GetSkills()
-		vars, computed, params, db, _, _, remaining := statusToTemplates(status, skills)
+		state := buildSheetState(pc, status, skills)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		// For INT/EDU changes, also update skill points display
 		if key == "INT" || key == "EDU" {
-			components.StatusPanelWithPoints(ctx, vars, computed, params, db, remaining).Render(r.Context(), w)
+			components.StatusPanelWithPoints(state).Render(r.Context(), w)
 		} else {
-			components.StatusPanel(ctx, vars, computed, params, db, true).Render(r.Context(), w)
+			components.StatusPanel(state, true).Render(r.Context(), w)
 		}
 	})
 
@@ -363,11 +382,11 @@ func main() {
 		skill.Grow = !skill.Grow
 		charStore.UpdateSkill(key, skill)
 
-		ctx := shared.NewPageContext()
+		pc := shared.NewPageContext()
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		_, _, _, _, skillList, skillExtra, skillPoints := statusToTemplates(status, skills)
-		return components.SkillsPanel(ctx, skillList, skillExtra, skillPoints, true)
+		state := buildSheetState(pc, status, skills)
+		return components.SkillsPanel(state, true)
 	}))
 
 	// Skill field adjustment (job, hobby, perm, temp)
@@ -449,11 +468,11 @@ func main() {
 			}
 			charStore.SetSkillExtra(skills.Extra.Job, skills.Extra.Hobby)
 
-			ctx := shared.NewPageContext()
+			pc := shared.NewPageContext()
 			status := charStore.GetStatus()
 			skills = charStore.GetSkills()
-			_, _, _, _, skillList, skillExtra, skillPoints := statusToTemplates(status, skills)
-			return components.SkillsPanelWithPoints(ctx, skillList, skillExtra, skillPoints)
+			state := buildSheetState(pc, status, skills)
+			return components.SkillsPanelWithPoints(state)
 		}
 
 		// Handle parameters (HP, MP, SAN)
@@ -465,11 +484,11 @@ func main() {
 
 			charStore.UpdateParameter(paramKey, delta)
 
-			ctx := shared.NewPageContext()
+			pc := shared.NewPageContext()
 			status := charStore.GetStatus()
 			skills := charStore.GetSkills()
-			vars, computed, params, db, _, _, _ := statusToTemplates(status, skills)
-			return components.StatusPanel(ctx, vars, computed, params, db, true)
+			state := buildSheetState(pc, status, skills)
+			return components.StatusPanel(state, true)
 		}
 
 		// Original status variable handling
@@ -479,7 +498,7 @@ func main() {
 		delta := 0
 		fmt.Sscanf(deltaStr, "%d", &delta)
 
-		ctx := shared.NewPageContext()
+		pc := shared.NewPageContext()
 		updated := charStore.UpdateVariableBase(key, delta)
 		if updated == nil {
 			return shared.Empty()
@@ -487,13 +506,13 @@ func main() {
 
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		vars, computed, params, db, _, _, remaining := statusToTemplates(status, skills)
+		state := buildSheetState(pc, status, skills)
 
 		// For INT/EDU changes, also update skill points display
 		if key == "INT" || key == "EDU" {
-			return components.StatusPanelWithPoints(ctx, vars, computed, params, db, remaining)
+			return components.StatusPanelWithPoints(state)
 		}
-		return components.StatusPanel(ctx, vars, computed, params, db, true)
+		return components.StatusPanel(state, true)
 	}))
 
 	// Storage test endpoint

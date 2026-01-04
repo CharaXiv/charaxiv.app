@@ -69,3 +69,25 @@ func (s Skill) Total() int {
 func (s Skill) Allocated() int {
 	return s.Job + s.Hobby + s.Perm + s.Temp
 }
+
+// StatusState holds all status-related data for rendering
+type StatusState struct {
+	Variables   []StatusVariable
+	Computed    []ComputedValue
+	Parameters  []StatusParameter
+	DamageBonus string
+}
+
+// SkillsState holds all skills-related data for rendering
+type SkillsState struct {
+	Items     []Skill
+	Extra     SkillExtra
+	Remaining SkillPoints
+}
+
+// SheetState holds all data needed to render a character sheet
+type SheetState struct {
+	PC     PageContext
+	Status StatusState
+	Skills SkillsState
+}

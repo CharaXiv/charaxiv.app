@@ -8,28 +8,28 @@ import (
 
 // StatusPanelWithPoints renders the status panel plus an OOB update for skill points
 // Used when INT/EDU changes affect remaining skill points
-templ StatusPanelWithPoints(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string, remaining SkillPoints) {
-	@StatusPanel(pc, variables, computed, parameters, damageBonus, true)
-	@PointsDisplay(remaining, true)
+templ StatusPanelWithPoints(state SheetState) {
+	@StatusPanel(state, true)
+	@PointsDisplay(state.Skills.Remaining, true)
 }
 
 var statusStyles = templ.NewOnceHandle()
 
 // StatusPanel renders the ability scores panel.
 // Set oob=true for out-of-band swaps.
-templ StatusPanel(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string, oob bool) {
+templ StatusPanel(state SheetState, oob bool) {
 	<div
 		id="status-panel"
 		if oob {
 			hx-swap-oob="true"
 		}
 	>
-		@StatusPanelContent(pc, variables, computed, parameters, damageBonus)
+		@StatusPanelContent(state)
 	</div>
 }
 
 // StatusPanelContent renders the inner content of the status panel
-templ StatusPanelContent(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string) {
+templ StatusPanelContent(state SheetState) {
 	@statusStyles.Once() {
 		<style>
 			.status-panel {
@@ -251,7 +251,7 @@ templ StatusPanelContent(pc PageContext, variables []StatusVariable, computed []
 		<div class="status-header">
 			<h2 class="status-title">能力値</h2>
 			<div class="status-actions">
-				if !pc.IsReadOnly() {
+				if !state.PC.IsReadOnly() {
 					@Button(ButtonGhostBlue, ButtonSizeDefault, templ.Attributes{"title": "ランダム"}) {
 						ランダム
 					}
@@ -259,12 +259,12 @@ templ StatusPanelContent(pc PageContext, variables []StatusVariable, computed []
 			</div>
 		</div>
 		<div class="status-grid">
-			for _, v := range variables {
-				@StatusRow(pc, v)
+			for _, v := range state.Status.Variables {
+				@StatusRow(state.PC, v)
 			}
 		</div>
 		<div class="computed-grid">
-			for _, c := range computed {
+			for _, c := range state.Status.Computed {
 				<div class="computed-key">{ c.Key }</div>
 				<div class="computed-value">{ strconv.Itoa(c.Value) }</div>
 			}
@@ -272,11 +272,11 @@ templ StatusPanelContent(pc PageContext, variables []StatusVariable, computed []
 		<div class="status-divider"></div>
 		<h2 class="parameters-title">パラメーター</h2>
 		<div class="parameters-grid">
-			for _, p := range parameters {
-				@ParameterRow(pc, p)
+			for _, p := range state.Status.Parameters {
+				@ParameterRow(state.PC, p)
 			}
-			@DamageBonusRow(pc, damageBonus)
-			@IndefiniteRow(parameters)
+			@DamageBonusRow(state.PC, state.Status.DamageBonus)
+			@IndefiniteRow(state.Status.Parameters)
 		</div>
 	</div>
 }

@@ -12,26 +12,26 @@ var skillsStyles = templ.NewOnceHandle()
 
 // SkillsPanel renders the skills section.
 // Set oob=true for out-of-band swaps.
-templ SkillsPanel(pc PageContext, skills []Skill, extra SkillExtra, remaining SkillPoints, oob bool) {
+templ SkillsPanel(state SheetState, oob bool) {
 	<div
 		id="skills-panel"
 		if oob {
 			hx-swap-oob="morph:outerHTML"
 		}
 	>
-		@SkillsPanelContent(pc, skills, extra, remaining)
+		@SkillsPanelContent(state)
 	</div>
 }
 
 // SkillsPanelWithPoints renders the skills panel plus an OOB update for the points display
 // Used when extra points change affects remaining skill points
-templ SkillsPanelWithPoints(pc PageContext, skills []Skill, extra SkillExtra, remaining SkillPoints) {
-	@SkillsPanel(pc, skills, extra, remaining, true)
-	@PointsDisplay(remaining, true)
+templ SkillsPanelWithPoints(state SheetState) {
+	@SkillsPanel(state, true)
+	@PointsDisplay(state.Skills.Remaining, true)
 }
 
 // SkillsPanelContent renders the inner content of the skills panel
-templ SkillsPanelContent(pc PageContext, skills []Skill, extra SkillExtra, remaining SkillPoints) {
+templ SkillsPanelContent(state SheetState) {
 	@skillsStyles.Once() {
 		<style>
 			.skills-panel {
@@ -284,10 +284,10 @@ templ SkillsPanelContent(pc PageContext, skills []Skill, extra SkillExtra, remai
 		<div class="skills-header">
 			<h2 class="skills-title">技能</h2>
 		</div>
-		@ExtraPointsForm(pc, extra)
+		@ExtraPointsForm(state.PC, state.Skills.Extra)
 		<div class="skills-list">
-			for _, skill := range skills {
-				@SkillRow(pc, skill, remaining)
+			for _, skill := range state.Skills.Items {
+				@SkillRow(state.PC, skill, state.Skills.Remaining)
 			}
 		</div>
 	</div>
