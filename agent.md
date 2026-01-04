@@ -61,6 +61,18 @@ The `~/LegacyCharaXiv` directory contains the previous SvelteKit/Firebase implem
 - **Co-located styles**: CSS in templ files using `OnceHandle`
 - **OOB swaps**: For updating multiple page regions from one response
 
+### OOB Swaps vs Chunk Replacement
+
+Prefer **granular OOB swaps** over replacing a large HTML chunk when:
+- Client-side state would be lost (e.g., `<details>` open/closed state, scroll position, focus)
+- The alternative requires JavaScript to preserve/restore that state
+
+Prefer **chunk replacement** when:
+- Updates are self-contained with no client-side state to preserve
+- The OOB target list would be excessively long or unpredictable
+
+**Example**: Skill value changes use OOB to update input + breakdown + total + remaining points. This preserves the `<details>` expand/collapse state without client-side JavaScript. Replacing the entire skills panel would collapse open details on every update.
+
 ## Templ Gotchas
 
 ### Boolean vs Valued Attributes
