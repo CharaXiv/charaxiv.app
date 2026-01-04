@@ -23,6 +23,13 @@ templ SkillsPanel(pc PageContext, skills []Skill, extra SkillExtra, remaining Sk
 	</div>
 }
 
+// SkillsPanelWithPoints renders the skills panel plus an OOB update for the points display
+// Used when extra points change affects remaining skill points
+templ SkillsPanelWithPoints(pc PageContext, skills []Skill, extra SkillExtra, remaining SkillPoints) {
+	@SkillsPanel(pc, skills, extra, remaining, true)
+	@PointsDisplay(remaining, true)
+}
+
 // SkillsPanelContent renders the inner content of the skills panel
 templ SkillsPanelContent(pc PageContext, skills []Skill, extra SkillExtra, remaining SkillPoints) {
 	@skillsStyles.Once() {
@@ -52,15 +59,29 @@ templ SkillsPanelContent(pc PageContext, skills []Skill, extra SkillExtra, remai
 
 			/* Points display (floating badge) */
 			.points-display {
+				position: fixed;
+				top: var(--space-2);
+				right: var(--space-2);
 				display: flex;
 				flex-direction: row;
 				gap: var(--space-2);
 				background: var(--white);
 				border-radius: var(--radius-md);
 				padding: var(--space-1) var(--space-2);
-				box-shadow: var(--shadow-default);
+				box-shadow: var(--shadow-lg);
 				font-size: var(--font-size-xs);
 				font-weight: var(--font-weight-semibold);
+				z-index: 100;
+			}
+
+			@media (min-width: 640px) {
+				.points-display {
+					top: auto;
+					bottom: var(--space-4);
+					right: var(--space-4);
+					padding: var(--space-2) var(--space-3);
+					font-size: var(--font-size-sm);
+				}
 			}
 
 			.points-label {
@@ -260,7 +281,6 @@ templ SkillsPanelContent(pc PageContext, skills []Skill, extra SkillExtra, remai
 	<div class="skills-panel">
 		<div class="skills-header">
 			<h2 class="skills-title">技能</h2>
-			@PointsDisplay(remaining, false)
 		</div>
 		@ExtraPointsForm(pc, extra)
 		<div class="skills-list">

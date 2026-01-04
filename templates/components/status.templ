@@ -6,6 +6,13 @@ import (
 	. "charaxiv/templates/shared"
 )
 
+// StatusPanelWithPoints renders the status panel plus an OOB update for skill points
+// Used when INT/EDU changes affect remaining skill points
+templ StatusPanelWithPoints(pc PageContext, variables []StatusVariable, computed []ComputedValue, parameters []StatusParameter, damageBonus string, remaining SkillPoints) {
+	@StatusPanel(pc, variables, computed, parameters, damageBonus, true)
+	@PointsDisplay(remaining, true)
+}
+
 var statusStyles = templ.NewOnceHandle()
 
 // StatusPanel renders the ability scores panel.

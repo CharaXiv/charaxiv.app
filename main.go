@@ -320,9 +320,15 @@ func main() {
 		ctx := shared.NewPageContext()
 		status = charStore.GetStatus()
 		skills := charStore.GetSkills()
-		vars, computed, params, db, _, _, _ := statusToTemplates(status, skills)
+		vars, computed, params, db, _, _, remaining := statusToTemplates(status, skills)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		components.StatusPanel(ctx, vars, computed, params, db, true).Render(r.Context(), w)
+
+		// For INT/EDU changes, also update skill points display
+		if key == "INT" || key == "EDU" {
+			components.StatusPanelWithPoints(ctx, vars, computed, params, db, remaining).Render(r.Context(), w)
+		} else {
+			components.StatusPanel(ctx, vars, computed, params, db, true).Render(r.Context(), w)
+		}
 	})
 
 	// Memo update endpoint
@@ -447,7 +453,7 @@ func main() {
 			status := charStore.GetStatus()
 			skills = charStore.GetSkills()
 			_, _, _, _, skillList, skillExtra, skillPoints := statusToTemplates(status, skills)
-			return components.SkillsPanel(ctx, skillList, skillExtra, skillPoints, true)
+			return components.SkillsPanelWithPoints(ctx, skillList, skillExtra, skillPoints)
 		}
 
 		// Original status variable handling
@@ -465,7 +471,12 @@ func main() {
 
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		vars, computed, params, db, _, _, _ := statusToTemplates(status, skills)
+		vars, computed, params, db, _, _, remaining := statusToTemplates(status, skills)
+
+		// For INT/EDU changes, also update skill points display
+		if key == "INT" || key == "EDU" {
+			return components.StatusPanelWithPoints(ctx, vars, computed, params, db, remaining)
+		}
 		return components.StatusPanel(ctx, vars, computed, params, db, true)
 	}))
 
