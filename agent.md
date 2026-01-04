@@ -11,27 +11,6 @@ This enables players to:
 - Have separate sheets for different scenarios within the same system
 - Share profile data (images, name) while keeping system-specific data separate
 
-### Data Hierarchy
-
-```
-Character
-├── Profile
-│   ├── name, ruby (reading)
-│   ├── images[] (shared across all sheets)
-│   ├── pinned image
-│   ├── tags[]
-│   └── public/secret memos (character-level)
-├── Access Control
-│   ├── owner
-│   ├── editors[]
-│   └── viewers[]
-└── Sheets[] (one per game system instance)
-    ├── id, key (system type), label
-    ├── pinned image (can differ from character)
-    ├── public/secret memos (scenario-level)
-    └── system-specific data (abilities, skills, etc.)
-```
-
 ### Key Distinction: Memos
 
 - **Character-level memos**: General character background, personality, etc. Shown on the character page.
@@ -97,20 +76,30 @@ Use the `if` block pattern for HTMX attributes like `hx-swap-oob`, `hx-boost`, e
 
 ## Development
 
-The dev server runs as a systemd service with auto-restart:
+### Working in Increments
+
+Develop in small, working increments. After each increment, leave a commit for traceability. This ensures:
+- The codebase is always in a functional state
+- Changes can be reviewed and understood in isolation
+- Easy rollback if something goes wrong
+
+### Dev Server
+
+The dev server runs as a systemd service with **automatic hot reload**:
+
+- **Just edit files** - the server rebuilds and the browser refreshes automatically
+- **No manual restart needed** - templ, Go, and CSS changes are all watched
+- Changes take effect within seconds
 
 ```bash
+# View logs (if needed for debugging)
+journalctl -u charaxiv-dev -f
+
 # Check status
 sudo systemctl status charaxiv-dev
-
-# Restart (after config changes)
-sudo systemctl restart charaxiv-dev
-
-# View logs
-journalctl -u charaxiv-dev -f
 ```
 
-The service handles hot reload automatically - just edit files and the browser will refresh.
+**Do not** manually restart the server during normal development.
 
 See `README.md` for:
 - Build commands
