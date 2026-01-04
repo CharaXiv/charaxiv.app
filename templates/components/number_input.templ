@@ -18,6 +18,24 @@ type NumberInputConfig struct {
 	Max         int
 	Placeholder string
 	Readonly    bool
+	HxPost      string // Base path for adjust endpoint (e.g., "/api/skill/回避/job/adjust"), defaults to "/api/status/{ID}/adjust"
+	HxTarget    string // Target selector, defaults to self ("#{ID}-wrapper")
+}
+
+// adjustPath returns the base path for the adjust endpoint
+func (c NumberInputConfig) adjustPath() string {
+	if c.HxPost != "" {
+		return c.HxPost
+	}
+	return fmt.Sprintf("/api/status/%s/adjust", c.ID)
+}
+
+// targetSelector returns the hx-target selector
+func (c NumberInputConfig) targetSelector() string {
+	if c.HxTarget != "" {
+		return c.HxTarget
+	}
+	return "#" + c.ID + "-wrapper"
 }
 
 // NumberInput renders a number input with ±1 and ±5 buttons
@@ -106,8 +124,8 @@ templ NumberInput(cfg NumberInputConfig) {
 			title="-5"
 			disabled?={ cfg.Readonly || cfg.Value <= cfg.Min }
 			hx-on::before-request="adjustNumberInput(this, -5)"
-			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=-5", cfg.ID) }
-			hx-target={ "#" + cfg.ID + "-wrapper" }
+			hx-post={ cfg.adjustPath() + "?delta=-5" }
+			hx-target={ cfg.targetSelector() }
 			hx-swap="outerHTML"
 		>
 			@icons.IconAnglesLeft()
@@ -118,8 +136,8 @@ templ NumberInput(cfg NumberInputConfig) {
 			title="-1"
 			disabled?={ cfg.Readonly || cfg.Value <= cfg.Min }
 			hx-on::before-request="adjustNumberInput(this, -1)"
-			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=-1", cfg.ID) }
-			hx-target={ "#" + cfg.ID + "-wrapper" }
+			hx-post={ cfg.adjustPath() + "?delta=-1" }
+			hx-target={ cfg.targetSelector() }
 			hx-swap="outerHTML"
 		>
 			@icons.IconAngleLeft()
@@ -146,8 +164,8 @@ templ NumberInput(cfg NumberInputConfig) {
 			title="+1"
 			disabled?={ cfg.Readonly || cfg.Value >= cfg.Max }
 			hx-on::before-request="adjustNumberInput(this, 1)"
-			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=1", cfg.ID) }
-			hx-target={ "#" + cfg.ID + "-wrapper" }
+			hx-post={ cfg.adjustPath() + "?delta=1" }
+			hx-target={ cfg.targetSelector() }
 			hx-swap="outerHTML"
 		>
 			@icons.IconAngleRight()
@@ -158,8 +176,8 @@ templ NumberInput(cfg NumberInputConfig) {
 			title="+5"
 			disabled?={ cfg.Readonly || cfg.Value >= cfg.Max }
 			hx-on::before-request="adjustNumberInput(this, 5)"
-			hx-post={ fmt.Sprintf("/api/status/%s/adjust?delta=5", cfg.ID) }
-			hx-target={ "#" + cfg.ID + "-wrapper" }
+			hx-post={ cfg.adjustPath() + "?delta=5" }
+			hx-target={ cfg.targetSelector() }
 			hx-swap="outerHTML"
 		>
 			@icons.IconAnglesRight()

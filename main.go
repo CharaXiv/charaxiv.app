@@ -398,11 +398,25 @@ func main() {
 
 		charStore.UpdateSkill(key, skill)
 
-		ctx := shared.NewPageContext()
+		// Build the skill for template
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		_, _, _, _, skillList, skillExtra, skillPoints := statusToTemplates(status, skills)
-		return components.SkillsPanel(ctx, skillList, skillExtra, skillPoints, true)
+		updatedSkill := skills.Skills[key]
+		remJob, remHobby := status.RemainingPoints(skills)
+
+		templSkill := shared.Skill{
+			Key:   key,
+			Init:  status.SkillInitialValue(key),
+			Job:   updatedSkill.Job,
+			Hobby: updatedSkill.Hobby,
+			Perm:  updatedSkill.Perm,
+			Temp:  updatedSkill.Temp,
+			Grow:  updatedSkill.Grow,
+			Order: updatedSkill.Order,
+		}
+		remaining := shared.SkillPoints{Job: remJob, Hobby: remHobby}
+
+		return components.SkillUpdateFragments(templSkill, field, remaining)
 	}))
 
 	// Extra points adjustment

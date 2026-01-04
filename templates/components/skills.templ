@@ -121,10 +121,17 @@ templ SkillsPanelContent(pc PageContext, skills []Skill, extra SkillExtra, remai
 				gap: var(--space-1);
 			}
 
-			/* Skill row */
+			/* Skill row (details element) */
 			.skill-row {
-				display: flex;
-				flex-direction: column;
+				display: block;
+			}
+
+			.skill-row summary {
+				list-style: none;
+			}
+
+			.skill-row summary::-webkit-details-marker {
+				display: none;
 			}
 
 			.skill-header {
@@ -213,11 +220,16 @@ templ SkillsPanelContent(pc PageContext, skills []Skill, extra SkillExtra, remai
 				align-items: center;
 				justify-content: center;
 				color: var(--slate-400);
+				transition: transform var(--transition-fast);
 			}
 
 			.skill-expand-icon .icon {
 				width: 12px;
 				height: 12px;
+			}
+
+			.skill-row[open] .skill-expand-icon {
+				transform: rotate(180deg);
 			}
 
 			/* Skill detail (expandable) */
@@ -248,7 +260,7 @@ templ SkillsPanelContent(pc PageContext, skills []Skill, extra SkillExtra, remai
 	<div class="skills-panel">
 		<div class="skills-header">
 			<h2 class="skills-title">技能</h2>
-			@PointsDisplay(remaining)
+			@PointsDisplay(remaining, false)
 		</div>
 		@ExtraPointsForm(pc, extra)
 		<div class="skills-list">
@@ -260,8 +272,14 @@ templ SkillsPanelContent(pc PageContext, skills []Skill, extra SkillExtra, remai
 }
 
 // PointsDisplay shows remaining skill points
-templ PointsDisplay(remaining SkillPoints) {
-	<div class="points-display" id="points-display">
+templ PointsDisplay(remaining SkillPoints, oob bool) {
+	<div
+		class="points-display"
+		id="points-display"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
 		<span class="points-label">職業P</span>
 		<span class={ "points-value", templ.KV("points-value--positive", remaining.Job > 0), templ.KV("points-value--negative", remaining.Job < 0) }>
 			{ strconv.Itoa(remaining.Job) }
@@ -308,9 +326,9 @@ templ ExtraPointsForm(pc PageContext, extra SkillExtra) {
 
 // SkillRow renders a single skill with expandable details
 templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
-	{{ expanded := skill.Allocated() > 0 }}
-	<div class="skill-row" id={ "skill-row-" + skill.Key }>
-		<div class="skill-header">
+	{{ expanded := skill.Allocated() > 0 || skill.Grow }}
+	<details class="skill-row" id={ "skill-row-" + skill.Key } open?={ expanded }>
+		<summary class="skill-header">
 			<button
 				type="button"
 				class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", skill.Grow) }
@@ -319,6 +337,7 @@ templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
 				hx-post={ fmt.Sprintf("/api/skill/%s/grow", skill.Key) }
 				hx-target="#skills-panel"
 				hx-swap="outerHTML"
+				onclick="event.stopPropagation()"
 			>
 				if skill.Grow {
 					@icons.IconSquareCheck()
@@ -327,32 +346,47 @@ templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
 				}
 			</button>
 			<div class={ "skill-name", templ.KV("skill-name--inactive", skill.Allocated() == 0 && !skill.Grow) }>{ skill.Key }</div>
-			if skill.Allocated() > 0 {
-				@SkillPointsBreakdown(skill)
-			}
-			<div class="skill-total" title="達成値合計">{ strconv.Itoa(skill.Total()) }</div>
+			@SkillPointsBreakdown(skill, false)
+			@SkillTotal(skill, false)
 			<div class="skill-expand-icon">
-				if expanded {
-					@icons.IconCaretUp()
-				} else {
-					@icons.IconCaretDown()
-				}
+				@icons.IconCaretDown()
 			</div>
-		</div>
+		</summary>
 		if !pc.IsReadOnly() {
 			@SkillDetail(pc, skill, remaining)
 		}
-	</div>
+	</details>
 }
 
 // SkillPointsBreakdown shows job/hobby/perm+temp breakdown
-templ SkillPointsBreakdown(skill Skill) {
-	<div class="skill-points-display" title="職業P / 興味P / 増加分+一時的">
+templ SkillPointsBreakdown(skill Skill, oob bool) {
+	<div
+		class="skill-points-display"
+		id={ "skill-breakdown-" + skill.Key }
+		title="職業P / 興味P / 増加分+一時的"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
 		<span class={ templ.KV("skill-points-zero", skill.Job == 0) }>{ fmt.Sprintf("%02d", skill.Job) }</span>
 		<span>/</span>
 		<span class={ templ.KV("skill-points-zero", skill.Hobby == 0) }>{ fmt.Sprintf("%02d", skill.Hobby) }</span>
 		<span>/</span>
 		<span class={ templ.KV("skill-points-zero", skill.Perm+skill.Temp == 0) }>{ fmt.Sprintf("%02d", skill.Perm+skill.Temp) }</span>
+	</div>
+}
+
+// SkillTotal shows the total skill value
+templ SkillTotal(skill Skill, oob bool) {
+	<div
+		class="skill-total"
+		id={ "skill-total-" + skill.Key }
+		title="達成値合計"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
+		{ strconv.Itoa(skill.Total()) }
 	</div>
 }
 
@@ -368,86 +402,66 @@ templ SkillDetail(pc PageContext, skill Skill, remaining SkillPoints) {
 	<div class="skill-detail">
 		<span class="skill-detail-label">職業P</span>
 		<div class="skill-detail-wrapper">
-			@SkillNumberInput(skill.Key, "job", skill.Job, 0, jobMax, pc.IsReadOnly())
+			@NumberInput(skillInputConfig(skill.Key, "job", skill.Job, 0, jobMax, pc.IsReadOnly()))
 		</div>
 		<span class="skill-detail-label">興味P</span>
 		<div class="skill-detail-wrapper">
-			@SkillNumberInput(skill.Key, "hobby", skill.Hobby, 0, hobbyMax, pc.IsReadOnly())
+			@NumberInput(skillInputConfig(skill.Key, "hobby", skill.Hobby, 0, hobbyMax, pc.IsReadOnly()))
 		</div>
 		<span class="skill-detail-label">増加分</span>
 		<div class="skill-detail-wrapper">
-			@SkillNumberInput(skill.Key, "perm", skill.Perm, -(total - skill.Perm), permMax, pc.IsReadOnly())
+			@NumberInput(skillInputConfig(skill.Key, "perm", skill.Perm, -(total - skill.Perm), permMax, pc.IsReadOnly()))
 		</div>
 		<span class="skill-detail-label">一時的</span>
 		<div class="skill-detail-wrapper">
-			@SkillNumberInput(skill.Key, "temp", skill.Temp, -(total - skill.Temp), tempMax, pc.IsReadOnly())
+			@NumberInput(skillInputConfig(skill.Key, "temp", skill.Temp, -(total - skill.Temp), tempMax, pc.IsReadOnly()))
 		</div>
 	</div>
 }
 
+// skillInputConfig creates a NumberInputConfig for skill fields
+func skillInputConfig(skillKey, field string, value, minVal, maxVal int, readonly bool) NumberInputConfig {
+	id := fmt.Sprintf("skill-%s-%s", skillKey, field)
+	return NumberInputConfig{
+		ID:       id,
+		Name:     id,
+		Value:    value,
+		Min:      minVal,
+		Max:      maxVal,
+		Readonly: readonly,
+		HxPost:   fmt.Sprintf("/api/skill/%s/%s/adjust", skillKey, field),
+	}
+}
+
 // SkillNumberInput renders a number input for skill values
-templ SkillNumberInput(skillKey, field string, value, minVal, maxVal int, readonly bool) {
-	{{ id := fmt.Sprintf("skill-%s-%s", skillKey, field) }}
-	<div class="number-input" id={ id + "-wrapper" }>
-		<button
-			type="button"
-			class="number-input-btn"
-			title="-5"
-			disabled?={ readonly || value <= minVal }
-			hx-on::before-request="adjustNumberInput(this, -5)"
-			hx-post={ fmt.Sprintf("/api/skill/%s/%s/adjust?delta=-5", skillKey, field) }
-			hx-target="#skills-panel"
-			hx-swap="outerHTML"
-		>
-			@icons.IconAnglesLeft()
-		</button>
-		<button
-			type="button"
-			class="number-input-btn"
-			title="-1"
-			disabled?={ readonly || value <= minVal }
-			hx-on::before-request="adjustNumberInput(this, -1)"
-			hx-post={ fmt.Sprintf("/api/skill/%s/%s/adjust?delta=-1", skillKey, field) }
-			hx-target="#skills-panel"
-			hx-swap="outerHTML"
-		>
-			@icons.IconAngleLeft()
-		</button>
-		<input
-			type="number"
-			class="number-input-field"
-			id={ id }
-			name={ id }
-			value={ strconv.Itoa(value) }
-			min={ strconv.Itoa(minVal) }
-			max={ strconv.Itoa(maxVal) }
-			readonly?={ readonly }
-		/>
-		<button
-			type="button"
-			class="number-input-btn"
-			title="+1"
-			disabled?={ readonly || value >= maxVal }
-			hx-on::before-request="adjustNumberInput(this, 1)"
-			hx-post={ fmt.Sprintf("/api/skill/%s/%s/adjust?delta=1", skillKey, field) }
-			hx-target="#skills-panel"
-			hx-swap="outerHTML"
-		>
-			@icons.IconAngleRight()
-		</button>
-		<button
-			type="button"
-			class="number-input-btn"
-			title="+5"
-			disabled?={ readonly || value >= maxVal }
-			hx-on::before-request="adjustNumberInput(this, 5)"
-			hx-post={ fmt.Sprintf("/api/skill/%s/%s/adjust?delta=5", skillKey, field) }
-			hx-target="#skills-panel"
-			hx-swap="outerHTML"
-		>
-			@icons.IconAnglesRight()
-		</button>
-	</div>
+// SkillUpdateFragments returns the input wrapper plus OOB swaps for related displays
+templ SkillUpdateFragments(skill Skill, field string, remaining SkillPoints) {
+	{{
+		total := skill.Total()
+		var value, minVal, maxVal int
+		switch field {
+		case "job":
+			value = skill.Job
+			minVal = 0
+			maxVal = min(99-(total-skill.Job), skill.Job+remaining.Job)
+		case "hobby":
+			value = skill.Hobby
+			minVal = 0
+			maxVal = min(99-(total-skill.Hobby), skill.Hobby+remaining.Hobby)
+		case "perm":
+			value = skill.Perm
+			minVal = -(total - skill.Perm)
+			maxVal = 99 - (total - skill.Perm)
+		case "temp":
+			value = skill.Temp
+			minVal = -(total - skill.Temp)
+			maxVal = 99 - (total - skill.Temp)
+		}
+	}}
+	@NumberInput(skillInputConfig(skill.Key, field, value, minVal, maxVal, false))
+	@SkillPointsBreakdown(skill, true)
+	@SkillTotal(skill, true)
+	@PointsDisplay(remaining, true)
 }
 
 func min(a, b int) int {
