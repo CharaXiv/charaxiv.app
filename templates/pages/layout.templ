@@ -37,8 +37,9 @@ templ Layout(title string, headerActions templ.Component, content templ.Componen
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title } - CharaXiv</title>
 			<script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+			<script src="https://unpkg.com/idiomorph@0.7.4/dist/idiomorph-ext.min.js" defer></script>
 		</head>
-		<body>
+		<body hx-ext="morph">
 			@components.DesignSystem()
 			@layoutStyles()
 			@components.Header() {

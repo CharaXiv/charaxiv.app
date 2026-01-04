@@ -16,7 +16,7 @@ templ SkillsPanel(pc PageContext, skills []Skill, extra SkillExtra, remaining Sk
 	<div
 		id="skills-panel"
 		if oob {
-			hx-swap-oob="true"
+			hx-swap-oob="morph:outerHTML"
 		}
 	>
 		@SkillsPanelContent(pc, skills, extra, remaining)
@@ -326,6 +326,7 @@ templ ExtraPointsForm(pc PageContext, extra SkillExtra) {
 					Max:         999,
 					Placeholder: "0",
 					Readonly:    pc.IsReadOnly(),
+					HxSwap:      "none",
 				})
 			</div>
 			<span class="extra-points-label">興味P</span>
@@ -338,6 +339,7 @@ templ ExtraPointsForm(pc PageContext, extra SkillExtra) {
 					Max:         999,
 					Placeholder: "0",
 					Readonly:    pc.IsReadOnly(),
+					HxSwap:      "none",
 				})
 			</div>
 		</div>
