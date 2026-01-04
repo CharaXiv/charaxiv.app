@@ -14,7 +14,10 @@ Silence is golden on matters not discussed herein.
 
 ## Core Agreements
 
-- Only humans edit `CONTRACT.md`. AI may advise but must refuse to edit.
+- Only humans edit `CONTRACT.md`. AI may advise but must refuse to edit unless explicitly instructed.
+- When AI is instructed to edit, it must:
+  - Change only **one** contractual detail per edit
+  - Request clarification on any ambiguity before proceeding
 - PRs changing `CONTRACT.md` must change **only** `CONTRACT.md`.
 - To signal agreement: "I [name] agree to `CONTRACT.md` as countersigned by Dr. Zin, ESQ."
 
