@@ -43,6 +43,7 @@ func (c NumberInputConfig) maxVal() int {
 	}
 	return 0
 }
+
 func (c NumberInputConfig) atMin() bool { return c.Min != nil && c.Value <= *c.Min }
 func (c NumberInputConfig) atMax() bool { return c.Max != nil && c.Value >= *c.Max }
 
@@ -86,6 +87,8 @@ templ NumberInput(cfg NumberInputConfig) {
 				flex: 1;
 				height: 100%;
 				min-width: 0;
+				max-width: 100%;
+				width: 4ch;
 				padding: 0 var(--space-1);
 				border: none;
 				background: transparent;
