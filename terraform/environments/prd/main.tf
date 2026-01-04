@@ -1,9 +1,5 @@
 terraform {
   required_providers {
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "~> 4.0"
-    }
     google = {
       source  = "hashicorp/google"
       version = "~> 5.0"
@@ -13,27 +9,26 @@ terraform {
   backend "gcs" {}
 }
 
-provider "cloudflare" {
-  api_token = var.cloudflare_api_token
-}
-
 provider "google" {
   project = var.gcp_project_id
   region  = var.gcp_region
 }
 
-module "r2" {
-  source = "../../modules/r2"
+module "gcs" {
+  source = "../../modules/gcs"
 
-  cloudflare_account_id = var.cloudflare_account_id
-  project_name          = "charaxiv"
-  environment           = "prd"
-  r2_location           = "APAC" # Close to Japan users
+  project_id    = var.gcp_project_id
+  project_name  = "charaxiv"
+  environment   = "prd"
+  location      = "ASIA-NORTHEAST1" # Tokyo
+  cors_origins  = ["https://charaxiv.app", "https://www.charaxiv.app"]
+  create_sa_key = false # Cloud Run uses workload identity
 }
 
 module "cloudrun" {
   source = "../../modules/cloudrun"
 
+  project_id   = var.gcp_project_id
   project_name = "charaxiv"
   environment  = "prd"
   region       = var.gcp_region
@@ -45,20 +40,21 @@ module "cloudrun" {
   cpu           = "1"
   memory        = "512Mi"
 
-  # R2 credentials
-  r2_account_id         = var.cloudflare_account_id
-  r2_bucket_name        = module.r2.bucket_name
-  r2_access_key_id      = var.r2_access_key_id
-  r2_secret_access_key  = var.r2_secret_access_key
+  # GCS bucket
+  gcs_bucket_name = module.gcs.bucket_name
 }
 
 # Outputs
-output "r2_bucket_name" {
-  value = module.r2.bucket_name
+output "bucket_name" {
+  value = module.gcs.bucket_name
 }
 
-output "r2_endpoint" {
-  value = module.r2.endpoint
+output "bucket_url" {
+  value = module.gcs.bucket_url
+}
+
+output "service_account_email" {
+  value = module.gcs.service_account_email
 }
 
 output "cloudrun_url" {

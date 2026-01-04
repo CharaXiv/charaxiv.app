@@ -33,6 +33,13 @@ resource "google_service_account" "cloudrun" {
   display_name = "Cloud Run service account for ${var.project_name} ${var.environment}"
 }
 
+# Grant Cloud Run service account access to GCS bucket
+resource "google_storage_bucket_iam_member" "cloudrun_gcs" {
+  bucket = var.gcs_bucket_name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.cloudrun.email}"
+}
+
 # Cloud Run service
 resource "google_cloud_run_v2_service" "app" {
   name     = "${var.project_name}-${var.environment}"
@@ -68,35 +75,9 @@ resource "google_cloud_run_v2_service" "app" {
         value = var.environment
       }
 
-      # R2 configuration
       env {
-        name  = "R2_ACCOUNT_ID"
-        value = var.r2_account_id
-      }
-
-      env {
-        name  = "R2_BUCKET"
-        value = var.r2_bucket_name
-      }
-
-      env {
-        name = "R2_ACCESS_KEY_ID"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.r2_access_key.secret_id
-            version = "latest"
-          }
-        }
-      }
-
-      env {
-        name = "R2_SECRET_ACCESS_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.r2_secret_key.secret_id
-            version = "latest"
-          }
-        }
+        name  = "GCS_BUCKET"
+        value = var.gcs_bucket_name
       }
 
       startup_probe {
@@ -119,8 +100,6 @@ resource "google_cloud_run_v2_service" "app" {
 
   depends_on = [
     google_project_service.run,
-    google_secret_manager_secret_version.r2_access_key,
-    google_secret_manager_secret_version.r2_secret_key,
   ]
 }
 
@@ -130,53 +109,4 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
   name     = google_cloud_run_v2_service.app.name
   role     = "roles/run.invoker"
   member   = "allUsers"
-}
-
-# Secret Manager for R2 credentials
-resource "google_project_service" "secretmanager" {
-  service            = "secretmanager.googleapis.com"
-  disable_on_destroy = false
-}
-
-resource "google_secret_manager_secret" "r2_access_key" {
-  secret_id = "${var.project_name}-${var.environment}-r2-access-key"
-
-  replication {
-    auto {}
-  }
-
-  depends_on = [google_project_service.secretmanager]
-}
-
-resource "google_secret_manager_secret_version" "r2_access_key" {
-  secret      = google_secret_manager_secret.r2_access_key.id
-  secret_data = var.r2_access_key_id
-}
-
-resource "google_secret_manager_secret" "r2_secret_key" {
-  secret_id = "${var.project_name}-${var.environment}-r2-secret-key"
-
-  replication {
-    auto {}
-  }
-
-  depends_on = [google_project_service.secretmanager]
-}
-
-resource "google_secret_manager_secret_version" "r2_secret_key" {
-  secret      = google_secret_manager_secret.r2_secret_key.id
-  secret_data = var.r2_secret_access_key
-}
-
-# Grant Cloud Run access to secrets
-resource "google_secret_manager_secret_iam_member" "r2_access_key" {
-  secret_id = google_secret_manager_secret.r2_access_key.id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.cloudrun.email}"
-}
-
-resource "google_secret_manager_secret_iam_member" "r2_secret_key" {
-  secret_id = google_secret_manager_secret.r2_secret_key.id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.cloudrun.email}"
 }

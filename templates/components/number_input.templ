@@ -104,6 +104,17 @@ templ NumberInput(cfg NumberInputConfig) {
 				color: var(--slate-300);
 			}
 
+			/* Hide native spinner controls (accessibility preserved via keyboard) */
+			.number-input-field::-webkit-outer-spin-button,
+			.number-input-field::-webkit-inner-spin-button {
+				-webkit-appearance: none;
+				margin: 0;
+			}
+
+			.number-input-field {
+				-moz-appearance: textfield;
+			}
+
 			.number-input-btn {
 				flex-shrink: 0;
 				width: 28px;
@@ -154,7 +165,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			}
 		</script>
 	}
-	<div class="number-input" id={ cfg.ID + "-wrapper" }>
+	<div class="number-input" id={ cfg.ID + "-wrapper" } hx-sync="this:queue last">
 		<button
 			type="button"
 			class="number-input-btn"
@@ -195,7 +206,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			readonly?={ cfg.Readonly }
 			if !cfg.Readonly {
 				hx-post={ fmt.Sprintf("/api/status/%s/set", cfg.ID) }
-				hx-trigger="input changed delay:3000ms"
+				hx-trigger="input changed delay:300ms"
 				hx-include="this"
 			}
 		/>
