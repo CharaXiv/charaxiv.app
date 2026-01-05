@@ -654,7 +654,7 @@ templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
 					@icons.IconSquare()
 				}
 			</button>
-			<div class={ "skill-name", templ.KV("skill-name--inactive", skill.Allocated() == 0 && !data.Grow) }>{ skill.Key }</div>
+			@SkillName(skill, false)
 			@SkillPointsBreakdown(skill, false)
 			@SkillTotal(skill, false)
 			<div class="skill-expand-icon">
@@ -665,6 +665,21 @@ templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
 			@SkillDetail(pc, skill, remaining)
 		}
 	</details>
+}
+
+// SkillName renders the skill name with active/inactive styling
+templ SkillName(skill Skill, oob bool) {
+	{{ data := skill.Single }}
+	{{ inactive := skill.Allocated() == 0 && !data.Grow }}
+	<div
+		class={ "skill-name", templ.KV("skill-name--inactive", inactive) }
+		id={ "skill-name-" + skill.Key }
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
+		{ skill.Key }
+	</div>
 }
 
 // SkillPointsBreakdown shows job/hobby/perm+temp breakdown
@@ -771,6 +786,7 @@ templ SkillUpdateFragments(skill Skill, field string, remaining SkillPoints) {
 		}
 	}}
 	@NumberInput(skillInputConfig(skill.Key, field, value, minVal, maxVal, false))
+	@SkillName(skill, true)
 	@SkillPointsBreakdown(skill, true)
 	@SkillTotal(skill, true)
 	@PointsDisplay(remaining, true)
