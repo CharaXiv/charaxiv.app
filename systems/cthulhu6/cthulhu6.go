@@ -22,18 +22,22 @@ type Status struct {
 	DB         string              `json:"db"`
 }
 
-// NewStatus creates a new status with default values
+// NewStatus creates a new status with default values.
+// Defaults are the expected values for each dice roll:
+//   - 3D6 (STR, CON, POW, DEX, APP): expected = 10.5, use 11
+//   - 2D6+6 (SIZ, INT): expected = 13
+//   - 3D6+3 (EDU): expected = 13.5, use 14
 func NewStatus() *Status {
 	return &Status{
 		Variables: map[string]Variable{
-			"STR": {Base: 10, Perm: 0, Temp: 0, Min: 3, Max: 18},
-			"CON": {Base: 12, Perm: 0, Temp: 0, Min: 3, Max: 18},
+			"STR": {Base: 11, Perm: 0, Temp: 0, Min: 3, Max: 18},
+			"CON": {Base: 11, Perm: 0, Temp: 0, Min: 3, Max: 18},
 			"POW": {Base: 11, Perm: 0, Temp: 0, Min: 3, Max: 18},
-			"DEX": {Base: 13, Perm: 0, Temp: 0, Min: 3, Max: 18},
-			"APP": {Base: 9, Perm: 0, Temp: 0, Min: 3, Max: 18},
-			"SIZ": {Base: 14, Perm: 0, Temp: 0, Min: 8, Max: 18},
-			"INT": {Base: 15, Perm: 0, Temp: 0, Min: 8, Max: 18},
-			"EDU": {Base: 16, Perm: 0, Temp: 0, Min: 6, Max: 21},
+			"DEX": {Base: 11, Perm: 0, Temp: 0, Min: 3, Max: 18},
+			"APP": {Base: 11, Perm: 0, Temp: 0, Min: 3, Max: 18},
+			"SIZ": {Base: 13, Perm: 0, Temp: 0, Min: 8, Max: 18},
+			"INT": {Base: 13, Perm: 0, Temp: 0, Min: 8, Max: 18},
+			"EDU": {Base: 14, Perm: 0, Temp: 0, Min: 6, Max: 21},
 		},
 		Parameters: map[string]*int{
 			"HP":  nil,
