@@ -14,11 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-
 	"charaxiv/models"
-	"charaxiv/routes"
 	"charaxiv/storage"
 )
 
@@ -101,20 +97,8 @@ func main() {
 		store = storage.NewMemoryStorage()
 	}
 
-	r := chi.NewRouter()
-
-	// Middleware
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Compress(5))
-
-	// Static files
-	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-
-	// Health check
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+	// Build server with application routes
+	r := NewServer(charStore)
 
 	// Dev mode: proxy to reloader (including WebSocket)
 	if os.Getenv("DEV") == "1" {
@@ -145,9 +129,6 @@ func main() {
 			reloaderProxy.ServeHTTP(w, r)
 		})
 	}
-
-	// Mount cthulhu6 system routes
-	r.Mount("/cthulhu6", routes.Cthulhu6(charStore))
 
 	// Storage test endpoint
 	r.Get("/api/storage/test", func(w http.ResponseWriter, r *http.Request) {

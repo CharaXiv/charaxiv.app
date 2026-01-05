@@ -271,7 +271,8 @@ func TestAllRoutesHaveTests(t *testing.T) {
 	}
 }
 
-// setupTestRouter creates a test router with a fresh store
+// setupTestRouter creates a test router with a fresh store.
+// Uses the same Cthulhu6 router constructor as the production code.
 func setupTestRouter() (chi.Router, *models.Store) {
 	store := models.NewStore()
 	r := chi.NewRouter()
