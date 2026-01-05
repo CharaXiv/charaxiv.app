@@ -652,22 +652,7 @@ templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
 	{{ expanded := skill.Allocated() > 0 || data.Grow }}
 	<details class="skill-row" id={ "skill-row-" + skill.Key } open?={ expanded }>
 		<summary class="skill-header">
-			<button
-				type="button"
-				class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", data.Grow) }
-				title="成長チェック"
-				disabled?={ pc.IsReadOnly() }
-				hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/%s/grow", skill.Key) }
-				hx-target="#skills-panel"
-				hx-swap="outerHTML"
-				onclick="event.stopPropagation()"
-			>
-				if data.Grow {
-					@icons.IconSquareCheck()
-				} else {
-					@icons.IconSquare()
-				}
-			</button>
+			@SkillGrowButton(pc, skill.Key, data.Grow, false)
 			@SkillName(skill, false)
 			@SkillPointsBreakdown(skill, false)
 			@SkillTotal(skill, false)
@@ -679,6 +664,35 @@ templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
 			@SkillDetail(pc, skill, remaining)
 		}
 	</details>
+}
+
+// SkillGrowButton renders the grow checkbox button for a skill
+templ SkillGrowButton(pc PageContext, skillKey string, grow bool, oob bool) {
+	<button
+		type="button"
+		id={ "skill-grow-" + skillKey }
+		class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", grow) }
+		title="成長チェック"
+		disabled?={ pc.IsReadOnly() }
+		hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/%s/grow", skillKey) }
+		hx-swap="none"
+		onclick="event.stopPropagation()"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
+		if grow {
+			@icons.IconSquareCheck()
+		} else {
+			@icons.IconSquare()
+		}
+	</button>
+}
+
+// SkillGrowUpdateFragments returns OOB swaps for grow button + skill name styling
+templ Cthulhu6SkillGrowUpdateFragments(pc PageContext, skill Skill) {
+	@SkillGrowButton(pc, skill.Key, skill.Single.Grow, true)
+	@SkillName(skill, true)
 }
 
 // SkillName renders the skill name with active/inactive styling
@@ -864,22 +878,7 @@ templ SkillGenreRow(pc PageContext, skillKey string, init int, index int, genre 
 	{{ total := init + genre.Total() }}
 	<details class="genre-row" id={ "genre-row-" + genreID } open?={ expanded }>
 		<summary class="genre-header">
-			<button
-				type="button"
-				class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", genre.Grow) }
-				title="成長チェック"
-				disabled?={ pc.IsReadOnly() }
-				hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/%s/genre/%d/grow", skillKey, index) }
-				hx-target="#skills-panel"
-				hx-swap="outerHTML"
-				onclick="event.stopPropagation()"
-			>
-				if genre.Grow {
-					@icons.IconSquareCheck()
-				} else {
-					@icons.IconSquare()
-				}
-			</button>
+			@GenreGrowButton(pc, skillKey, index, genre.Grow, false)
 			if !pc.IsReadOnly() {
 				<input
 					type="text"
@@ -911,6 +910,35 @@ templ SkillGenreRow(pc PageContext, skillKey string, init int, index int, genre 
 			@GenreDetail(pc, skillKey, init, index, genre, remaining)
 		}
 	</details>
+}
+
+// GenreGrowButton renders the grow checkbox button for a genre
+templ GenreGrowButton(pc PageContext, skillKey string, index int, grow bool, oob bool) {
+	{{ genreID := fmt.Sprintf("%s-%d", skillKey, index) }}
+	<button
+		type="button"
+		id={ "genre-grow-" + genreID }
+		class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", grow) }
+		title="成長チェック"
+		disabled?={ pc.IsReadOnly() }
+		hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/%s/genre/%d/grow", skillKey, index) }
+		hx-swap="none"
+		onclick="event.stopPropagation()"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
+		if grow {
+			@icons.IconSquareCheck()
+		} else {
+			@icons.IconSquare()
+		}
+	</button>
+}
+
+// GenreGrowUpdateFragments returns OOB swap for grow button
+templ Cthulhu6GenreGrowUpdateFragments(pc PageContext, skillKey string, index int, grow bool) {
+	@GenreGrowButton(pc, skillKey, index, grow, true)
 }
 
 // GenrePointsBreakdown shows job/hobby/perm+temp breakdown for a genre

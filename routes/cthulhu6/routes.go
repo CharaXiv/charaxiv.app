@@ -150,9 +150,8 @@ func Routes(store *Store) chi.Router {
 
 		pc := buildPageContext(store, charID, basePath)
 		status := store.GetStatus(charID)
-		skills := store.GetSkills(charID)
-		state := cthulhu6.BuildSheetState(pc, status, skills)
-		return components.Cthulhu6SkillsPanel(state, true)
+		templSkill := cthulhu6.BuildSkill(status, key, skill)
+		return components.Cthulhu6SkillGrowUpdateFragments(pc, templSkill)
 	}))
 
 	// Skill field adjustment (job, hobby, perm, temp)
@@ -255,10 +254,7 @@ func Routes(store *Store) chi.Router {
 		store.UpdateSkill(charID, key, skill)
 
 		pc := buildPageContext(store, charID, basePath)
-		status := store.GetStatus(charID)
-		skills := store.GetSkills(charID)
-		state := cthulhu6.BuildSheetState(pc, status, skills)
-		return components.Cthulhu6SkillsPanel(state, true)
+		return components.Cthulhu6GenreGrowUpdateFragments(pc, key, index, skill.Multi.Genres[index].Grow)
 	}))
 
 	// Update genre label
