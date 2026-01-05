@@ -138,19 +138,46 @@ func SkillCategoryOrder(cat SkillCategory) int {
 	}
 }
 
-// Cthulhu6Skill represents a single skill
-type Cthulhu6Skill struct {
+// Cthulhu6SkillBase contains common skill point fields
+type Cthulhu6SkillBase struct {
 	Job   int  `json:"job"`
 	Hobby int  `json:"hobby"`
 	Perm  int  `json:"perm"`
 	Temp  int  `json:"temp"`
 	Grow  bool `json:"grow"`
-	Order int  `json:"order"` // order within category
 }
 
 // Sum returns total allocated points
-func (s Cthulhu6Skill) Sum() int {
+func (s Cthulhu6SkillBase) Sum() int {
 	return s.Job + s.Hobby + s.Perm + s.Temp
+}
+
+// Cthulhu6SkillGenre represents a single genre/specialty within a multi-genre skill
+type Cthulhu6SkillGenre struct {
+	Cthulhu6SkillBase
+	Label string `json:"label"` // e.g., "自動車" for 運転
+}
+
+// Cthulhu6Skill represents a skill (single or multi-genre)
+type Cthulhu6Skill struct {
+	Cthulhu6SkillBase                      // embedded for single skills
+	Order             int                  `json:"order"`            // order within category
+	Multi             bool                 `json:"multi"`            // true if this is a multi-genre skill
+	Genres            []Cthulhu6SkillGenre `json:"genres,omitempty"` // genres for multi skills
+}
+
+// Sum returns total allocated points (for single skills only)
+func (s Cthulhu6Skill) Sum() int {
+	return s.Cthulhu6SkillBase.Sum()
+}
+
+// TotalGenrePoints returns sum of all genre points for multi skills
+func (s Cthulhu6Skill) TotalGenrePoints() (job, hobby int) {
+	for _, g := range s.Genres {
+		job += g.Job
+		hobby += g.Hobby
+	}
+	return
 }
 
 // Cthulhu6SkillExtra represents extra skill points
@@ -172,9 +199,19 @@ type Cthulhu6Skills struct {
 	Extra      Cthulhu6SkillExtra                          `json:"extra"`
 }
 
-// skill is a helper to create a skill
+// skill is a helper to create a single skill
 func skill(order int) Cthulhu6Skill {
-	return Cthulhu6Skill{Job: 0, Hobby: 0, Perm: 0, Temp: 0, Grow: false, Order: order}
+	return Cthulhu6Skill{Order: order, Multi: false}
+}
+
+// multiSkill is a helper to create a multi-genre skill
+func multiSkill(order int) Cthulhu6Skill {
+	return Cthulhu6Skill{Order: order, Multi: true, Genres: []Cthulhu6SkillGenre{}}
+}
+
+// multiSkillWithGenre creates a multi-genre skill with one initial genre
+func multiSkillWithGenre(order int, label string) Cthulhu6Skill {
+	return Cthulhu6Skill{Order: order, Multi: true, Genres: []Cthulhu6SkillGenre{{Label: label}}}
 }
 
 // NewCthulhu6Skills creates skills with default values
@@ -221,13 +258,13 @@ func NewCthulhu6Skills() *Cthulhu6Skills {
 				Skills: map[string]Cthulhu6Skill{
 					"登攀":    skill(0),
 					"跳躍":    skill(1),
-					"運転":    skill(2),
-					"操縦":    skill(3),
+					"運転":    multiSkill(2),
+					"操縦":    multiSkill(3),
 					"重機械操作": skill(4),
 					"機械修理":  skill(5),
 					"電気修理":  skill(6),
-					"製作":    skill(7),
-					"芸術":    skill(8),
+					"製作":    multiSkill(7),
+					"芸術":    multiSkill(8),
 					"乗馬":    skill(9),
 					"水泳":    skill(10),
 				},
@@ -246,8 +283,8 @@ func NewCthulhu6Skills() *Cthulhu6Skills {
 				Skills: map[string]Cthulhu6Skill{
 					"クトゥルフ神話": skill(0),
 					"心理学":     skill(1),
-					"母国語":     skill(2),
-					"ほかの言語":   skill(3),
+					"母国語":     multiSkillWithGenre(2, ""),
+					"ほかの言語":   multiSkill(3),
 					"オカルト":    skill(4),
 					"歴史":      skill(5),
 					"法律":      skill(6),
@@ -317,8 +354,15 @@ func (s *Cthulhu6Status) RemainingPoints(skills *Cthulhu6Skills) (job int, hobby
 	usedHobby := 0
 	for _, catData := range skills.Categories {
 		for _, skill := range catData.Skills {
-			usedJob += skill.Job
-			usedHobby += skill.Hobby
+			if skill.Multi {
+				for _, g := range skill.Genres {
+					usedJob += g.Job
+					usedHobby += g.Hobby
+				}
+			} else {
+				usedJob += skill.Job
+				usedHobby += skill.Hobby
+			}
 		}
 	}
 	for _, skill := range skills.Custom {

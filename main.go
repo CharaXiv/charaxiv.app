@@ -122,17 +122,35 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 		catData := skills.Categories[cat]
 		skillsInCat := make([]shared.Skill, 0, len(catData.Skills))
 		for key, s := range catData.Skills {
-			skillsInCat = append(skillsInCat, shared.Skill{
+			init := status.SkillInitialValue(key)
+			skill := shared.Skill{
 				Key:      key,
 				Category: string(cat),
-				Init:     status.SkillInitialValue(key),
+				Init:     init,
 				Job:      s.Job,
 				Hobby:    s.Hobby,
 				Perm:     s.Perm,
 				Temp:     s.Temp,
 				Grow:     s.Grow,
 				Order:    s.Order,
-			})
+				Multi:    s.Multi,
+			}
+			if s.Multi {
+				skill.Genres = make([]shared.SkillGenre, len(s.Genres))
+				for i, g := range s.Genres {
+					skill.Genres[i] = shared.SkillGenre{
+						Index: i,
+						Label: g.Label,
+						Init:  init,
+						Job:   g.Job,
+						Hobby: g.Hobby,
+						Perm:  g.Perm,
+						Temp:  g.Temp,
+						Grow:  g.Grow,
+					}
+				}
+			}
+			skillsInCat = append(skillsInCat, skill)
 		}
 		sort.Slice(skillsInCat, func(i, j int) bool {
 			return skillsInCat[i].Order < skillsInCat[j].Order
@@ -462,6 +480,135 @@ func main() {
 		remaining := shared.SkillPoints{Job: remJob, Hobby: remHobby}
 
 		return components.SkillUpdateFragments(templSkill, field, remaining)
+	}))
+
+	// Add genre to multi-skill
+	r.Post("/api/skill/{key}/genre/add", HTML(func(r *http.Request) templ.Component {
+		key := chi.URLParam(r, "key")
+
+		skill, ok := charStore.GetSkill(key)
+		if !ok || !skill.Multi {
+			return shared.Empty()
+		}
+
+		// Add a new empty genre
+		skill.Genres = append(skill.Genres, models.Cthulhu6SkillGenre{})
+		charStore.UpdateSkill(key, skill)
+
+		pc := shared.NewPageContext()
+		status := charStore.GetStatus()
+		skills := charStore.GetSkills()
+		state := buildSheetState(pc, status, skills)
+		return components.SkillsPanel(state, true)
+	}))
+
+	// Delete genre from multi-skill
+	r.Post("/api/skill/{key}/genre/{index}/delete", HTML(func(r *http.Request) templ.Component {
+		key := chi.URLParam(r, "key")
+		indexStr := chi.URLParam(r, "index")
+		index := 0
+		fmt.Sscanf(indexStr, "%d", &index)
+
+		skill, ok := charStore.GetSkill(key)
+		if !ok || !skill.Multi || index < 0 || index >= len(skill.Genres) {
+			return shared.Empty()
+		}
+
+		// Remove the genre at index
+		skill.Genres = append(skill.Genres[:index], skill.Genres[index+1:]...)
+		charStore.UpdateSkill(key, skill)
+
+		pc := shared.NewPageContext()
+		status := charStore.GetStatus()
+		skills := charStore.GetSkills()
+		state := buildSheetState(pc, status, skills)
+		return components.SkillsPanel(state, true)
+	}))
+
+	// Toggle grow flag for genre
+	r.Post("/api/skill/{key}/genre/{index}/grow", HTML(func(r *http.Request) templ.Component {
+		key := chi.URLParam(r, "key")
+		indexStr := chi.URLParam(r, "index")
+		index := 0
+		fmt.Sscanf(indexStr, "%d", &index)
+
+		skill, ok := charStore.GetSkill(key)
+		if !ok || !skill.Multi || index < 0 || index >= len(skill.Genres) {
+			return shared.Empty()
+		}
+
+		skill.Genres[index].Grow = !skill.Genres[index].Grow
+		charStore.UpdateSkill(key, skill)
+
+		pc := shared.NewPageContext()
+		status := charStore.GetStatus()
+		skills := charStore.GetSkills()
+		state := buildSheetState(pc, status, skills)
+		return components.SkillsPanel(state, true)
+	}))
+
+	// Update genre label
+	r.Post("/api/skill/{key}/genre/{index}/label", HTML(func(r *http.Request) templ.Component {
+		key := chi.URLParam(r, "key")
+		indexStr := chi.URLParam(r, "index")
+		index := 0
+		fmt.Sscanf(indexStr, "%d", &index)
+
+		skill, ok := charStore.GetSkill(key)
+		if !ok || !skill.Multi || index < 0 || index >= len(skill.Genres) {
+			return shared.Empty()
+		}
+
+		r.ParseForm()
+		label := r.FormValue("label")
+		skill.Genres[index].Label = label
+		charStore.UpdateSkill(key, skill)
+
+		return shared.Empty()
+	}))
+
+	// Adjust genre field (job, hobby, perm, temp)
+	r.Post("/api/skill/{key}/genre/{index}/{field}/adjust", HTML(func(r *http.Request) templ.Component {
+		key := chi.URLParam(r, "key")
+		indexStr := chi.URLParam(r, "index")
+		field := chi.URLParam(r, "field")
+		index := 0
+		fmt.Sscanf(indexStr, "%d", &index)
+
+		deltaStr := r.URL.Query().Get("delta")
+		delta := 0
+		fmt.Sscanf(deltaStr, "%d", &delta)
+
+		skill, ok := charStore.GetSkill(key)
+		if !ok || !skill.Multi || index < 0 || index >= len(skill.Genres) {
+			return shared.Empty()
+		}
+
+		genre := &skill.Genres[index]
+		switch field {
+		case "job":
+			genre.Job += delta
+			if genre.Job < 0 {
+				genre.Job = 0
+			}
+		case "hobby":
+			genre.Hobby += delta
+			if genre.Hobby < 0 {
+				genre.Hobby = 0
+			}
+		case "perm":
+			genre.Perm += delta
+		case "temp":
+			genre.Temp += delta
+		}
+
+		charStore.UpdateSkill(key, skill)
+
+		pc := shared.NewPageContext()
+		status := charStore.GetStatus()
+		skills := charStore.GetSkills()
+		state := buildSheetState(pc, status, skills)
+		return components.SkillsPanel(state, true)
 	}))
 
 	// Extra points adjustment

@@ -346,6 +346,200 @@ templ SkillsPanelContent(state SheetState) {
 				border-radius: var(--radius-md);
 				background: var(--white);
 			}
+
+			/* Multi-skill styles */
+			.skill-multi {
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-1);
+				padding: var(--space-2) 0;
+			}
+
+			.skill-multi-header {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+				gap: var(--space-2);
+			}
+
+			.skill-multi-name {
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-700);
+			}
+
+			.skill-multi-init {
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-600);
+				font-variant-numeric: tabular-nums;
+			}
+
+			.skill-multi-add {
+				width: 32px;
+				height: 32px;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				border: none;
+				background: transparent;
+				color: var(--blue-600);
+				border-radius: var(--radius-md);
+				cursor: pointer;
+				transition: var(--transition-fast);
+			}
+
+			.skill-multi-add:hover {
+				background: var(--blue-50);
+				color: var(--blue-700);
+			}
+
+			.skill-multi-add .icon {
+				width: 16px;
+				height: 16px;
+			}
+
+			.skill-multi-genres {
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-1);
+			}
+
+			.skill-multi-empty {
+				padding: 0 var(--space-6);
+			}
+
+			.skill-multi-empty-btn {
+				width: 100%;
+				height: 32px;
+				border: 1px dashed var(--slate-300);
+				background: transparent;
+				color: var(--blue-600);
+				border-radius: var(--radius-md);
+				cursor: pointer;
+				font-size: var(--font-size-sm);
+				transition: var(--transition-fast);
+			}
+
+			.skill-multi-empty-btn:hover {
+				background: var(--blue-50);
+				border-color: var(--blue-400);
+			}
+
+			/* Genre row styles */
+			.genre-row {
+				display: block;
+			}
+
+			.genre-row summary {
+				list-style: none;
+			}
+
+			.genre-row summary::-webkit-details-marker {
+				display: none;
+			}
+
+			.genre-header {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				gap: var(--space-1);
+				padding: var(--space-1);
+				border-radius: var(--radius-md);
+				cursor: pointer;
+				transition: var(--transition-fast);
+			}
+
+			.genre-header:hover {
+				background: var(--slate-50);
+			}
+
+			.genre-label-input {
+				flex: 1 1 0;
+				min-width: 0;
+				border: none;
+				background: transparent;
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-700);
+				padding: var(--space-1);
+			}
+
+			.genre-label-input::placeholder {
+				color: var(--slate-400);
+			}
+
+			.genre-label-input:focus {
+				outline: none;
+				background: var(--slate-100);
+				border-radius: var(--radius-sm);
+			}
+
+			.genre-label-readonly {
+				flex: 1 1 0;
+				min-width: 0;
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-700);
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+
+			.genre-points-display {
+				display: flex;
+				align-items: center;
+				height: 32px;
+				font-size: var(--font-size-xs);
+				font-variant-numeric: tabular-nums;
+				color: var(--slate-500);
+			}
+
+			.genre-points-display span {
+				padding: 0 2px;
+			}
+
+			.genre-points-zero {
+				color: var(--slate-300);
+			}
+
+			.genre-total {
+				width: 24px;
+				text-align: center;
+				font-weight: var(--font-weight-semibold);
+				color: var(--slate-800);
+				font-variant-numeric: tabular-nums;
+			}
+
+			.genre-detail {
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-2);
+				padding: var(--space-2) var(--space-4);
+				background: var(--slate-50);
+				border-radius: var(--radius-md);
+				margin-left: 32px;
+			}
+
+			.genre-detail-grid {
+				display: grid;
+				grid-template-columns: max-content 1fr;
+				gap: var(--space-2);
+				align-items: center;
+			}
+
+			.genre-delete-btn {
+				width: 100%;
+				height: 32px;
+				border: none;
+				background: transparent;
+				color: var(--red-600);
+				border-radius: var(--radius-md);
+				cursor: pointer;
+				font-size: var(--font-size-sm);
+				transition: var(--transition-fast);
+			}
+
+			.genre-delete-btn:hover {
+				background: var(--red-50);
+			}
 		</style>
 	}
 	<div class="skills-panel">
@@ -429,7 +623,11 @@ templ SkillCategoryBlock(pc PageContext, category SkillCategory, remaining Skill
 		<h3 class="skills-category-title">{ category.Name }</h3>
 		<div class="skills-list">
 			for _, skill := range category.Skills {
-				@SkillRow(pc, skill, remaining)
+				if skill.Multi {
+					@SkillMulti(pc, skill, remaining)
+				} else {
+					@SkillRow(pc, skill, remaining)
+				}
 			}
 		</div>
 	</div>
@@ -579,4 +777,175 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// SkillMulti renders a multi-genre skill (e.g., 運転, 芸術)
+templ SkillMulti(pc PageContext, skill Skill, remaining SkillPoints) {
+	<div class="skill-multi" id={ "skill-multi-" + skill.Key }>
+		<div class="skill-multi-header">
+			<span class="skill-multi-name">{ skill.Key }</span>
+			<div style="display: flex; align-items: center; gap: var(--space-2);">
+				<span class="skill-multi-init" title="初期値">{ strconv.Itoa(skill.Init) }</span>
+				if !pc.IsReadOnly() {
+					<button
+						type="button"
+						class="skill-multi-add"
+						title={ fmt.Sprintf("「%s」技能を追加", skill.Key) }
+						hx-post={ fmt.Sprintf("/api/skill/%s/genre/add", skill.Key) }
+						hx-target="#skills-panel"
+						hx-swap="outerHTML"
+					>
+						@icons.IconPlus()
+					</button>
+				}
+			</div>
+		</div>
+		if len(skill.Genres) > 0 {
+			<div class="skill-multi-genres">
+				for _, genre := range skill.Genres {
+					@SkillGenreRow(pc, skill.Key, genre, remaining)
+				}
+			</div>
+		} else if !pc.IsReadOnly() {
+			<div class="skill-multi-empty">
+				<button
+					type="button"
+					class="skill-multi-empty-btn"
+					hx-post={ fmt.Sprintf("/api/skill/%s/genre/add", skill.Key) }
+					hx-target="#skills-panel"
+					hx-swap="outerHTML"
+				>
+					「{ skill.Key }」技能を追加
+				</button>
+			</div>
+		}
+	</div>
+}
+
+// SkillGenreRow renders a single genre within a multi-genre skill
+templ SkillGenreRow(pc PageContext, skillKey string, genre SkillGenre, remaining SkillPoints) {
+	{{ expanded := genre.Allocated() > 0 || genre.Grow }}
+	{{ genreID := fmt.Sprintf("%s-%d", skillKey, genre.Index) }}
+	<details class="genre-row" id={ "genre-row-" + genreID } open?={ expanded }>
+		<summary class="genre-header">
+			<button
+				type="button"
+				class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", genre.Grow) }
+				title="成長チェック"
+				disabled?={ pc.IsReadOnly() }
+				hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/grow", skillKey, genre.Index) }
+				hx-target="#skills-panel"
+				hx-swap="outerHTML"
+				onclick="event.stopPropagation()"
+			>
+				if genre.Grow {
+					@icons.IconSquareCheck()
+				} else {
+					@icons.IconSquare()
+				}
+			</button>
+			if !pc.IsReadOnly() {
+				<input
+					type="text"
+					class="genre-label-input"
+					value={ genre.Label }
+					placeholder={ skillKey }
+					onclick="event.stopPropagation()"
+					hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/label", skillKey, genre.Index) }
+					hx-trigger="change"
+					hx-swap="none"
+					name="label"
+				/>
+			} else {
+				<span class="genre-label-readonly">
+					if genre.Label != "" {
+						{ genre.Label }
+					} else {
+						{ skillKey }
+					}
+				</span>
+			}
+			@GenrePointsBreakdown(genre)
+			<div class="genre-total" title="達成値合計">{ strconv.Itoa(genre.Total()) }</div>
+			<div class="skill-expand-icon">
+				@icons.IconCaretDown()
+			</div>
+		</summary>
+		if !pc.IsReadOnly() {
+			@GenreDetail(pc, skillKey, genre, remaining)
+		}
+	</details>
+}
+
+// GenrePointsBreakdown shows job/hobby/perm+temp breakdown for a genre
+templ GenrePointsBreakdown(genre SkillGenre) {
+	<div class="genre-points-display" title="職業P / 興味P / 増加分+一時的">
+		<span class={ templ.KV("genre-points-zero", genre.Job == 0) }>{ fmt.Sprintf("%02d", genre.Job) }</span>
+		<span>/</span>
+		<span class={ templ.KV("genre-points-zero", genre.Hobby == 0) }>{ fmt.Sprintf("%02d", genre.Hobby) }</span>
+		<span>/</span>
+		<span class={ templ.KV("genre-points-zero", genre.Perm+genre.Temp == 0) }>{ fmt.Sprintf("%02d", genre.Perm+genre.Temp) }</span>
+	</div>
+}
+
+// GenreDetail renders the expandable detail section for a genre
+templ GenreDetail(pc PageContext, skillKey string, genre SkillGenre, remaining SkillPoints) {
+	{{
+		total := genre.Total()
+		jobMax := min(99-(total-genre.Job), genre.Job+remaining.Job)
+		hobbyMax := min(99-(total-genre.Hobby), genre.Hobby+remaining.Hobby)
+		permMax := 99 - (total - genre.Perm)
+		tempMax := 99 - (total - genre.Temp)
+	}}
+	<div class="genre-detail">
+		<div class="genre-detail-grid">
+			<span class="skill-detail-label">職業P</span>
+			<div class="skill-detail-wrapper">
+				@NumberInput(genreInputConfig(skillKey, genre.Index, "job", genre.Job, 0, jobMax, pc.IsReadOnly()))
+			</div>
+			<span class="skill-detail-label">興味P</span>
+			<div class="skill-detail-wrapper">
+				@NumberInput(genreInputConfig(skillKey, genre.Index, "hobby", genre.Hobby, 0, hobbyMax, pc.IsReadOnly()))
+			</div>
+			<span class="skill-detail-label">増加分</span>
+			<div class="skill-detail-wrapper">
+				@NumberInput(genreInputConfig(skillKey, genre.Index, "perm", genre.Perm, -(total - genre.Perm), permMax, pc.IsReadOnly()))
+			</div>
+			<span class="skill-detail-label">一時的</span>
+			<div class="skill-detail-wrapper">
+				@NumberInput(genreInputConfig(skillKey, genre.Index, "temp", genre.Temp, -(total - genre.Temp), tempMax, pc.IsReadOnly()))
+			</div>
+		</div>
+		<button
+			type="button"
+			class="genre-delete-btn"
+			hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/delete", skillKey, genre.Index) }
+			hx-target="#skills-panel"
+			hx-swap="outerHTML"
+			hx-confirm={ fmt.Sprintf("「%s」技能を削除しますか？", genreLabelOrKey(genre.Label, skillKey)) }
+		>
+			技能を削除する
+		</button>
+	</div>
+}
+
+// genreInputConfig creates a NumberInputConfig for genre fields
+func genreInputConfig(skillKey string, genreIndex int, field string, value, minVal, maxVal int, readonly bool) NumberInputConfig {
+	id := fmt.Sprintf("genre-%s-%d-%s", skillKey, genreIndex, field)
+	return NumberInputConfig{
+		ID:       id,
+		Name:     id,
+		Value:    value,
+		Min:      Ptr(minVal),
+		Max:      Ptr(maxVal),
+		Readonly: readonly,
+		HxPost:   fmt.Sprintf("/api/skill/%s/genre/%d/%s/adjust", skillKey, genreIndex, field),
+	}
+}
+
+func genreLabelOrKey(label, key string) string {
+	if label != "" {
+		return label
+	}
+	return key
 }

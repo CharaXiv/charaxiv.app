@@ -49,19 +49,44 @@ type SkillExtra struct {
 }
 
 // Skill represents a single skill with its point allocations
-type Skill struct {
-	Key      string // skill key/name
-	Category string // skill category (e.g., "戦闘技能")
-	Init     int    // initial value (from character stats)
-	Job      int    // occupation points allocated
-	Hobby    int    // hobby points allocated
-	Perm     int    // permanent increase
-	Temp     int    // temporary increase
-	Grow     bool   // marked for growth check
-	Order    int    // display order within category
+// SkillGenre represents a single genre/specialty within a multi-genre skill
+type SkillGenre struct {
+	Index int    // index within the skill's genres
+	Label string // genre label (e.g., "自動車" for 運転)
+	Init  int    // initial value (same as parent skill)
+	Job   int
+	Hobby int
+	Perm  int
+	Temp  int
+	Grow  bool
 }
 
-// Total returns the total skill value (init + all bonuses)
+// Total returns the total value for this genre
+func (g SkillGenre) Total() int {
+	return g.Init + g.Job + g.Hobby + g.Perm + g.Temp
+}
+
+// Allocated returns total allocated points
+func (g SkillGenre) Allocated() int {
+	return g.Job + g.Hobby + g.Perm + g.Temp
+}
+
+// Skill represents a single skill (may be single or multi-genre)
+type Skill struct {
+	Key      string       // skill key/name
+	Category string       // skill category (e.g., "戦闘技能")
+	Init     int          // initial value (from character stats)
+	Job      int          // occupation points allocated (for single skills)
+	Hobby    int          // hobby points allocated (for single skills)
+	Perm     int          // permanent increase (for single skills)
+	Temp     int          // temporary increase (for single skills)
+	Grow     bool         // marked for growth check (for single skills)
+	Order    int          // display order within category
+	Multi    bool         // true if this is a multi-genre skill
+	Genres   []SkillGenre // genres for multi-genre skills
+}
+
+// Total returns the total skill value (init + all bonuses) for single skills
 func (s Skill) Total() int {
 	return s.Init + s.Job + s.Hobby + s.Perm + s.Temp
 }
