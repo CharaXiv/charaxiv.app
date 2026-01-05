@@ -597,37 +597,65 @@ func TestStatusAdjustOOBFragments(t *testing.T) {
 	}
 }
 
-// TestAllRoutesRegistered verifies all expected routes are registered
+// expectedRoutes defines all routes that should be registered with their descriptions
+var expectedRoutes = []struct {
+	method string
+	route  string
+	desc   string
+}{
+	{"GET", "/cthulhu6/", "Sheet page"},
+	{"POST", "/cthulhu6/api/preview/on", "Enable preview mode"},
+	{"POST", "/cthulhu6/api/preview/off", "Disable preview mode"},
+	{"POST", "/cthulhu6/api/status/{key}/set", "Set status variable directly"},
+	{"POST", "/cthulhu6/api/status/{key}/adjust", "Adjust status/param/extra points"},
+	{"POST", "/cthulhu6/api/memo/{id}/set", "Set memo content"},
+	{"POST", "/cthulhu6/api/skill/{key}/grow", "Toggle skill grow flag"},
+	{"POST", "/cthulhu6/api/skill/{key}/{field}/adjust", "Adjust skill field"},
+	{"POST", "/cthulhu6/api/skill/{key}/genre/add", "Add genre to multi-skill"},
+	{"POST", "/cthulhu6/api/skill/{key}/genre/{index}/delete", "Delete genre from multi-skill"},
+	{"POST", "/cthulhu6/api/skill/{key}/genre/{index}/grow", "Toggle genre grow flag"},
+	{"POST", "/cthulhu6/api/skill/{key}/genre/{index}/label", "Set genre label"},
+	{"POST", "/cthulhu6/api/skill/{key}/genre/{index}/{field}/adjust", "Adjust genre field"},
+}
+
+// TestAllRoutesRegistered verifies all expected routes are registered and no unexpected routes exist
 func TestAllRoutesRegistered(t *testing.T) {
 	r, _ := setupTestRouter()
 
-	expectedRoutes := map[string]bool{
-		"GET /cthulhu6/":                                              false,
-		"POST /cthulhu6/api/preview/on":                               false,
-		"POST /cthulhu6/api/preview/off":                              false,
-		"POST /cthulhu6/api/status/{key}/set":                         false,
-		"POST /cthulhu6/api/status/{key}/adjust":                      false,
-		"POST /cthulhu6/api/memo/{id}/set":                            false,
-		"POST /cthulhu6/api/skill/{key}/grow":                         false,
-		"POST /cthulhu6/api/skill/{key}/{field}/adjust":               false,
-		"POST /cthulhu6/api/skill/{key}/genre/add":                    false,
-		"POST /cthulhu6/api/skill/{key}/genre/{index}/delete":         false,
-		"POST /cthulhu6/api/skill/{key}/genre/{index}/grow":           false,
-		"POST /cthulhu6/api/skill/{key}/genre/{index}/label":          false,
-		"POST /cthulhu6/api/skill/{key}/genre/{index}/{field}/adjust": false,
+	// Build set of expected routes
+	expected := make(map[string]string) // route -> description
+	for _, rt := range expectedRoutes {
+		key := rt.method + " " + rt.route
+		expected[key] = rt.desc
 	}
 
+	// Track which expected routes were found
+	found := make(map[string]bool)
+	for key := range expected {
+		found[key] = false
+	}
+
+	// Walk registered routes
+	var unexpected []string
 	chi.Walk(r, func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
 		key := method + " " + route
-		if _, ok := expectedRoutes[key]; ok {
-			expectedRoutes[key] = true
+		if _, ok := expected[key]; ok {
+			found[key] = true
+		} else {
+			unexpected = append(unexpected, key)
 		}
 		return nil
 	})
 
-	for route, found := range expectedRoutes {
-		if !found {
-			t.Errorf("Expected route not registered: %s", route)
+	// Report missing routes
+	for key, wasFound := range found {
+		if !wasFound {
+			t.Errorf("Expected route not registered: %s (%s)", key, expected[key])
 		}
+	}
+
+	// Report unexpected routes
+	for _, key := range unexpected {
+		t.Errorf("Unexpected route registered: %s", key)
 	}
 }
