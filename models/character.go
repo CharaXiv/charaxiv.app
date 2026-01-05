@@ -138,8 +138,8 @@ func SkillCategoryOrder(cat SkillCategory) int {
 	}
 }
 
-// Cthulhu6SkillBase contains common skill point fields
-type Cthulhu6SkillBase struct {
+// Cthulhu6SingleSkill represents a simple skill with point allocations
+type Cthulhu6SingleSkill struct {
 	Job   int  `json:"job"`
 	Hobby int  `json:"hobby"`
 	Perm  int  `json:"perm"`
@@ -148,36 +148,54 @@ type Cthulhu6SkillBase struct {
 }
 
 // Sum returns total allocated points
-func (s Cthulhu6SkillBase) Sum() int {
+func (s *Cthulhu6SingleSkill) Sum() int {
 	return s.Job + s.Hobby + s.Perm + s.Temp
 }
 
-// Cthulhu6SkillGenre represents a single genre/specialty within a multi-genre skill
+// Cthulhu6SkillGenre represents one specialty within a multi-genre skill
 type Cthulhu6SkillGenre struct {
-	Cthulhu6SkillBase
 	Label string `json:"label"` // e.g., "自動車" for 運転
+	Job   int    `json:"job"`
+	Hobby int    `json:"hobby"`
+	Perm  int    `json:"perm"`
+	Temp  int    `json:"temp"`
+	Grow  bool   `json:"grow"`
 }
 
-// Cthulhu6Skill represents a skill (single or multi-genre)
-type Cthulhu6Skill struct {
-	Cthulhu6SkillBase                      // embedded for single skills
-	Order             int                  `json:"order"`            // order within category
-	Multi             bool                 `json:"multi"`            // true if this is a multi-genre skill
-	Genres            []Cthulhu6SkillGenre `json:"genres,omitempty"` // genres for multi skills
+// Sum returns total allocated points for this genre
+func (g *Cthulhu6SkillGenre) Sum() int {
+	return g.Job + g.Hobby + g.Perm + g.Temp
 }
 
-// Sum returns total allocated points (for single skills only)
-func (s Cthulhu6Skill) Sum() int {
-	return s.Cthulhu6SkillBase.Sum()
+// Cthulhu6MultiSkill represents a skill with multiple specialties
+type Cthulhu6MultiSkill struct {
+	Genres []Cthulhu6SkillGenre `json:"genres"`
 }
 
-// TotalGenrePoints returns sum of all genre points for multi skills
-func (s Cthulhu6Skill) TotalGenrePoints() (job, hobby int) {
-	for _, g := range s.Genres {
+// TotalPoints returns sum of all genre points
+func (m *Cthulhu6MultiSkill) TotalPoints() (job, hobby int) {
+	for _, g := range m.Genres {
 		job += g.Job
 		hobby += g.Hobby
 	}
 	return
+}
+
+// Cthulhu6Skill wraps either a single or multi skill (exactly one will be non-nil)
+type Cthulhu6Skill struct {
+	Order  int                  `json:"order"`
+	Single *Cthulhu6SingleSkill `json:"single,omitempty"`
+	Multi  *Cthulhu6MultiSkill  `json:"multi,omitempty"`
+}
+
+// IsSingle returns true if this is a single skill
+func (s Cthulhu6Skill) IsSingle() bool {
+	return s.Single != nil
+}
+
+// IsMulti returns true if this is a multi-genre skill
+func (s Cthulhu6Skill) IsMulti() bool {
+	return s.Multi != nil
 }
 
 // Cthulhu6SkillExtra represents extra skill points
@@ -199,19 +217,19 @@ type Cthulhu6Skills struct {
 	Extra      Cthulhu6SkillExtra                          `json:"extra"`
 }
 
-// skill is a helper to create a single skill
-func skill(order int) Cthulhu6Skill {
-	return Cthulhu6Skill{Order: order, Multi: false}
+// singleSkill creates a single skill
+func singleSkill(order int) Cthulhu6Skill {
+	return Cthulhu6Skill{Order: order, Single: &Cthulhu6SingleSkill{}}
 }
 
-// multiSkill is a helper to create a multi-genre skill
+// multiSkill creates an empty multi-genre skill
 func multiSkill(order int) Cthulhu6Skill {
-	return Cthulhu6Skill{Order: order, Multi: true, Genres: []Cthulhu6SkillGenre{}}
+	return Cthulhu6Skill{Order: order, Multi: &Cthulhu6MultiSkill{Genres: []Cthulhu6SkillGenre{}}}
 }
 
 // multiSkillWithGenre creates a multi-genre skill with one initial genre
 func multiSkillWithGenre(order int, label string) Cthulhu6Skill {
-	return Cthulhu6Skill{Order: order, Multi: true, Genres: []Cthulhu6SkillGenre{{Label: label}}}
+	return Cthulhu6Skill{Order: order, Multi: &Cthulhu6MultiSkill{Genres: []Cthulhu6SkillGenre{{Label: label}}}}
 }
 
 // NewCthulhu6Skills creates skills with default values
@@ -221,86 +239,86 @@ func NewCthulhu6Skills() *Cthulhu6Skills {
 			SkillCategoryCombat: {
 				Order: 0,
 				Skills: map[string]Cthulhu6Skill{
-					"回避":       skill(0),
-					"キック":      skill(1),
-					"組み付き":     skill(2),
-					"こぶし":      skill(3),
-					"頭突き":      skill(4),
-					"投擲":       skill(5),
-					"マーシャルアーツ": skill(6),
-					"拳銃":       skill(7),
-					"サブマシンガン":  skill(8),
-					"ショットガン":   skill(9),
-					"マシンガン":    skill(10),
-					"ライフル":     skill(11),
+					"回避":       singleSkill(0),
+					"キック":      singleSkill(1),
+					"組み付き":     singleSkill(2),
+					"こぶし":      singleSkill(3),
+					"頭突き":      singleSkill(4),
+					"投擲":       singleSkill(5),
+					"マーシャルアーツ": singleSkill(6),
+					"拳銃":       singleSkill(7),
+					"サブマシンガン":  singleSkill(8),
+					"ショットガン":   singleSkill(9),
+					"マシンガン":    singleSkill(10),
+					"ライフル":     singleSkill(11),
 				},
 			},
 			SkillCategoryInvestigation: {
 				Order: 1,
 				Skills: map[string]Cthulhu6Skill{
-					"目星":    skill(0),
-					"聞き耳":   skill(1),
-					"図書館":   skill(2),
-					"応急手当":  skill(3),
-					"隠れる":   skill(4),
-					"隠す":    skill(5),
-					"変装":    skill(6),
-					"忍び歩き":  skill(7),
-					"追跡":    skill(8),
-					"ナビゲート": skill(9),
-					"写真術":   skill(10),
-					"鍵開け":   skill(11),
-					"精神分析":  skill(12),
+					"目星":    singleSkill(0),
+					"聞き耳":   singleSkill(1),
+					"図書館":   singleSkill(2),
+					"応急手当":  singleSkill(3),
+					"隠れる":   singleSkill(4),
+					"隠す":    singleSkill(5),
+					"変装":    singleSkill(6),
+					"忍び歩き":  singleSkill(7),
+					"追跡":    singleSkill(8),
+					"ナビゲート": singleSkill(9),
+					"写真術":   singleSkill(10),
+					"鍵開け":   singleSkill(11),
+					"精神分析":  singleSkill(12),
 				},
 			},
 			SkillCategoryAction: {
 				Order: 2,
 				Skills: map[string]Cthulhu6Skill{
-					"登攀":    skill(0),
-					"跳躍":    skill(1),
+					"登攀":    singleSkill(0),
+					"跳躍":    singleSkill(1),
 					"運転":    multiSkill(2),
 					"操縦":    multiSkill(3),
-					"重機械操作": skill(4),
-					"機械修理":  skill(5),
-					"電気修理":  skill(6),
+					"重機械操作": singleSkill(4),
+					"機械修理":  singleSkill(5),
+					"電気修理":  singleSkill(6),
 					"製作":    multiSkill(7),
 					"芸術":    multiSkill(8),
-					"乗馬":    skill(9),
-					"水泳":    skill(10),
+					"乗馬":    singleSkill(9),
+					"水泳":    singleSkill(10),
 				},
 			},
 			SkillCategorySocial: {
 				Order: 3,
 				Skills: map[string]Cthulhu6Skill{
-					"言いくるめ": skill(0),
-					"信用":    skill(1),
-					"説得":    skill(2),
-					"値切り":   skill(3),
+					"言いくるめ": singleSkill(0),
+					"信用":    singleSkill(1),
+					"説得":    singleSkill(2),
+					"値切り":   singleSkill(3),
 				},
 			},
 			SkillCategoryKnowledge: {
 				Order: 4,
 				Skills: map[string]Cthulhu6Skill{
-					"クトゥルフ神話": skill(0),
-					"心理学":     skill(1),
+					"クトゥルフ神話": singleSkill(0),
+					"心理学":     singleSkill(1),
 					"母国語":     multiSkillWithGenre(2, ""),
 					"ほかの言語":   multiSkill(3),
-					"オカルト":    skill(4),
-					"歴史":      skill(5),
-					"法律":      skill(6),
-					"経理":      skill(7),
-					"人類学":     skill(8),
-					"考古学":     skill(9),
-					"博物学":     skill(10),
-					"医学":      skill(11),
-					"薬学":      skill(12),
-					"生物学":     skill(13),
-					"化学":      skill(14),
-					"コンピューター": skill(15),
-					"電子工学":    skill(16),
-					"物理学":     skill(17),
-					"天文学":     skill(18),
-					"地質学":     skill(19),
+					"オカルト":    singleSkill(4),
+					"歴史":      singleSkill(5),
+					"法律":      singleSkill(6),
+					"経理":      singleSkill(7),
+					"人類学":     singleSkill(8),
+					"考古学":     singleSkill(9),
+					"博物学":     singleSkill(10),
+					"医学":      singleSkill(11),
+					"薬学":      singleSkill(12),
+					"生物学":     singleSkill(13),
+					"化学":      singleSkill(14),
+					"コンピューター": singleSkill(15),
+					"電子工学":    singleSkill(16),
+					"物理学":     singleSkill(17),
+					"天文学":     singleSkill(18),
+					"地質学":     singleSkill(19),
 				},
 			},
 		},
@@ -354,20 +372,22 @@ func (s *Cthulhu6Status) RemainingPoints(skills *Cthulhu6Skills) (job int, hobby
 	usedHobby := 0
 	for _, catData := range skills.Categories {
 		for _, skill := range catData.Skills {
-			if skill.Multi {
-				for _, g := range skill.Genres {
+			if skill.IsMulti() {
+				for _, g := range skill.Multi.Genres {
 					usedJob += g.Job
 					usedHobby += g.Hobby
 				}
-			} else {
-				usedJob += skill.Job
-				usedHobby += skill.Hobby
+			} else if skill.IsSingle() {
+				usedJob += skill.Single.Job
+				usedHobby += skill.Single.Hobby
 			}
 		}
 	}
 	for _, skill := range skills.Custom {
-		usedJob += skill.Job
-		usedHobby += skill.Hobby
+		if skill.IsSingle() {
+			usedJob += skill.Single.Job
+			usedHobby += skill.Single.Hobby
+		}
 	}
 
 	return totalJob - usedJob, totalHobby - usedHobby

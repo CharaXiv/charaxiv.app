@@ -127,27 +127,28 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 				Key:      key,
 				Category: string(cat),
 				Init:     init,
-				Job:      s.Job,
-				Hobby:    s.Hobby,
-				Perm:     s.Perm,
-				Temp:     s.Temp,
-				Grow:     s.Grow,
 				Order:    s.Order,
-				Multi:    s.Multi,
 			}
-			if s.Multi {
-				skill.Genres = make([]shared.SkillGenre, len(s.Genres))
-				for i, g := range s.Genres {
-					skill.Genres[i] = shared.SkillGenre{
-						Index: i,
+			if s.IsMulti() {
+				genres := make([]shared.SkillGenre, len(s.Multi.Genres))
+				for i, g := range s.Multi.Genres {
+					genres[i] = shared.SkillGenre{
 						Label: g.Label,
-						Init:  init,
 						Job:   g.Job,
 						Hobby: g.Hobby,
 						Perm:  g.Perm,
 						Temp:  g.Temp,
 						Grow:  g.Grow,
 					}
+				}
+				skill.Multi = &shared.MultiSkillData{Genres: genres}
+			} else if s.IsSingle() {
+				skill.Single = &shared.SingleSkillData{
+					Job:   s.Single.Job,
+					Hobby: s.Single.Hobby,
+					Perm:  s.Single.Perm,
+					Temp:  s.Single.Temp,
+					Grow:  s.Single.Grow,
 				}
 			}
 			skillsInCat = append(skillsInCat, skill)
@@ -412,12 +413,12 @@ func main() {
 		key := chi.URLParam(r, "key")
 
 		skill, ok := charStore.GetSkill(key)
-		if !ok {
+		if !ok || !skill.IsSingle() {
 			return shared.Empty()
 		}
 
 		// Toggle grow flag
-		skill.Grow = !skill.Grow
+		skill.Single.Grow = !skill.Single.Grow
 		charStore.UpdateSkill(key, skill)
 
 		pc := shared.NewPageContext()
@@ -437,26 +438,26 @@ func main() {
 		fmt.Sscanf(deltaStr, "%d", &delta)
 
 		skill, ok := charStore.GetSkill(key)
-		if !ok {
+		if !ok || !skill.IsSingle() {
 			return shared.Empty()
 		}
 
 		// Apply delta to the appropriate field
 		switch field {
 		case "job":
-			skill.Job += delta
-			if skill.Job < 0 {
-				skill.Job = 0
+			skill.Single.Job += delta
+			if skill.Single.Job < 0 {
+				skill.Single.Job = 0
 			}
 		case "hobby":
-			skill.Hobby += delta
-			if skill.Hobby < 0 {
-				skill.Hobby = 0
+			skill.Single.Hobby += delta
+			if skill.Single.Hobby < 0 {
+				skill.Single.Hobby = 0
 			}
 		case "perm":
-			skill.Perm += delta
+			skill.Single.Perm += delta
 		case "temp":
-			skill.Temp += delta
+			skill.Single.Temp += delta
 		}
 
 		charStore.UpdateSkill(key, skill)
@@ -470,12 +471,14 @@ func main() {
 		templSkill := shared.Skill{
 			Key:   key,
 			Init:  status.SkillInitialValue(key),
-			Job:   updatedSkill.Job,
-			Hobby: updatedSkill.Hobby,
-			Perm:  updatedSkill.Perm,
-			Temp:  updatedSkill.Temp,
-			Grow:  updatedSkill.Grow,
 			Order: updatedSkill.Order,
+			Single: &shared.SingleSkillData{
+				Job:   updatedSkill.Single.Job,
+				Hobby: updatedSkill.Single.Hobby,
+				Perm:  updatedSkill.Single.Perm,
+				Temp:  updatedSkill.Single.Temp,
+				Grow:  updatedSkill.Single.Grow,
+			},
 		}
 		remaining := shared.SkillPoints{Job: remJob, Hobby: remHobby}
 
@@ -487,12 +490,12 @@ func main() {
 		key := chi.URLParam(r, "key")
 
 		skill, ok := charStore.GetSkill(key)
-		if !ok || !skill.Multi {
+		if !ok || !skill.IsMulti() {
 			return shared.Empty()
 		}
 
 		// Add a new empty genre
-		skill.Genres = append(skill.Genres, models.Cthulhu6SkillGenre{})
+		skill.Multi.Genres = append(skill.Multi.Genres, models.Cthulhu6SkillGenre{})
 		charStore.UpdateSkill(key, skill)
 
 		pc := shared.NewPageContext()
@@ -510,12 +513,12 @@ func main() {
 		fmt.Sscanf(indexStr, "%d", &index)
 
 		skill, ok := charStore.GetSkill(key)
-		if !ok || !skill.Multi || index < 0 || index >= len(skill.Genres) {
+		if !ok || !skill.IsMulti() || index < 0 || index >= len(skill.Multi.Genres) {
 			return shared.Empty()
 		}
 
 		// Remove the genre at index
-		skill.Genres = append(skill.Genres[:index], skill.Genres[index+1:]...)
+		skill.Multi.Genres = append(skill.Multi.Genres[:index], skill.Multi.Genres[index+1:]...)
 		charStore.UpdateSkill(key, skill)
 
 		pc := shared.NewPageContext()
@@ -533,11 +536,11 @@ func main() {
 		fmt.Sscanf(indexStr, "%d", &index)
 
 		skill, ok := charStore.GetSkill(key)
-		if !ok || !skill.Multi || index < 0 || index >= len(skill.Genres) {
+		if !ok || !skill.IsMulti() || index < 0 || index >= len(skill.Multi.Genres) {
 			return shared.Empty()
 		}
 
-		skill.Genres[index].Grow = !skill.Genres[index].Grow
+		skill.Multi.Genres[index].Grow = !skill.Multi.Genres[index].Grow
 		charStore.UpdateSkill(key, skill)
 
 		pc := shared.NewPageContext()
@@ -555,13 +558,13 @@ func main() {
 		fmt.Sscanf(indexStr, "%d", &index)
 
 		skill, ok := charStore.GetSkill(key)
-		if !ok || !skill.Multi || index < 0 || index >= len(skill.Genres) {
+		if !ok || !skill.IsMulti() || index < 0 || index >= len(skill.Multi.Genres) {
 			return shared.Empty()
 		}
 
 		r.ParseForm()
 		label := r.FormValue("label")
-		skill.Genres[index].Label = label
+		skill.Multi.Genres[index].Label = label
 		charStore.UpdateSkill(key, skill)
 
 		return shared.Empty()
@@ -580,11 +583,11 @@ func main() {
 		fmt.Sscanf(deltaStr, "%d", &delta)
 
 		skill, ok := charStore.GetSkill(key)
-		if !ok || !skill.Multi || index < 0 || index >= len(skill.Genres) {
+		if !ok || !skill.IsMulti() || index < 0 || index >= len(skill.Multi.Genres) {
 			return shared.Empty()
 		}
 
-		genre := &skill.Genres[index]
+		genre := &skill.Multi.Genres[index]
 		switch field {
 		case "job":
 			genre.Job += delta

@@ -50,10 +50,8 @@ type SkillExtra struct {
 
 // Skill represents a single skill with its point allocations
 // SkillGenre represents a single genre/specialty within a multi-genre skill
-type SkillGenre struct {
-	Index int    // index within the skill's genres
-	Label string // genre label (e.g., "自動車" for 運転)
-	Init  int    // initial value (same as parent skill)
+// SingleSkillData holds point allocations for a single skill
+type SingleSkillData struct {
 	Job   int
 	Hobby int
 	Perm  int
@@ -61,39 +59,66 @@ type SkillGenre struct {
 	Grow  bool
 }
 
-// Total returns the total value for this genre
-func (g SkillGenre) Total() int {
-	return g.Init + g.Job + g.Hobby + g.Perm + g.Temp
+// Total returns total allocated points
+func (s *SingleSkillData) Total() int {
+	return s.Job + s.Hobby + s.Perm + s.Temp
 }
 
-// Allocated returns total allocated points
-func (g SkillGenre) Allocated() int {
+// SkillGenre represents one specialty within a multi-genre skill
+type SkillGenre struct {
+	Label string // genre label (e.g., "自動車" for 運転)
+	Job   int
+	Hobby int
+	Perm  int
+	Temp  int
+	Grow  bool
+}
+
+// Total returns total allocated points for this genre
+func (g SkillGenre) Total() int {
 	return g.Job + g.Hobby + g.Perm + g.Temp
 }
 
-// Skill represents a single skill (may be single or multi-genre)
-type Skill struct {
-	Key      string       // skill key/name
-	Category string       // skill category (e.g., "戦闘技能")
-	Init     int          // initial value (from character stats)
-	Job      int          // occupation points allocated (for single skills)
-	Hobby    int          // hobby points allocated (for single skills)
-	Perm     int          // permanent increase (for single skills)
-	Temp     int          // temporary increase (for single skills)
-	Grow     bool         // marked for growth check (for single skills)
-	Order    int          // display order within category
-	Multi    bool         // true if this is a multi-genre skill
-	Genres   []SkillGenre // genres for multi-genre skills
+// MultiSkillData holds genres for a multi-genre skill
+type MultiSkillData struct {
+	Genres []SkillGenre
 }
 
-// Total returns the total skill value (init + all bonuses) for single skills
+// Skill represents a skill (exactly one of Single or Multi will be non-nil)
+type Skill struct {
+	Key      string           // skill key/name
+	Category string           // skill category (e.g., "戦闘技能")
+	Init     int              // initial value (from character stats)
+	Order    int              // display order within category
+	Single   *SingleSkillData // non-nil for single skills
+	Multi    *MultiSkillData  // non-nil for multi-genre skills
+}
+
+// IsSingle returns true if this is a single skill
+func (s Skill) IsSingle() bool {
+	return s.Single != nil
+}
+
+// IsMulti returns true if this is a multi-genre skill
+func (s Skill) IsMulti() bool {
+	return s.Multi != nil
+}
+
+// Total returns the total skill value (init + allocated) for single skills
 func (s Skill) Total() int {
-	return s.Init + s.Job + s.Hobby + s.Perm + s.Temp
+	if s.Single != nil {
+		return s.Init + s.Single.Total()
+	}
+	return s.Init
 }
 
 // Allocated returns total allocated points (job + hobby + perm + temp)
+// Allocated returns total allocated points for single skills
 func (s Skill) Allocated() int {
-	return s.Job + s.Hobby + s.Perm + s.Temp
+	if s.Single != nil {
+		return s.Single.Total()
+	}
+	return 0
 }
 
 // StatusState holds all status-related data for rendering

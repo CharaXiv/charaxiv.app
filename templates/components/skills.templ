@@ -624,7 +624,7 @@ templ SkillCategoryBlock(pc PageContext, category SkillCategory, remaining Skill
 		<h3 class="skills-category-title">{ category.Name }</h3>
 		<div class="skills-list">
 			for _, skill := range category.Skills {
-				if skill.Multi {
+				if skill.IsMulti() {
 					@SkillMulti(pc, skill, remaining)
 				} else {
 					@SkillRow(pc, skill, remaining)
@@ -635,12 +635,13 @@ templ SkillCategoryBlock(pc PageContext, category SkillCategory, remaining Skill
 }
 
 templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
-	{{ expanded := skill.Allocated() > 0 || skill.Grow }}
+	{{ data := skill.Single }}
+	{{ expanded := skill.Allocated() > 0 || data.Grow }}
 	<details class="skill-row" id={ "skill-row-" + skill.Key } open?={ expanded }>
 		<summary class="skill-header">
 			<button
 				type="button"
-				class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", skill.Grow) }
+				class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", data.Grow) }
 				title="成長チェック"
 				disabled?={ pc.IsReadOnly() }
 				hx-post={ fmt.Sprintf("/api/skill/%s/grow", skill.Key) }
@@ -648,13 +649,13 @@ templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
 				hx-swap="outerHTML"
 				onclick="event.stopPropagation()"
 			>
-				if skill.Grow {
+				if data.Grow {
 					@icons.IconSquareCheck()
 				} else {
 					@icons.IconSquare()
 				}
 			</button>
-			<div class={ "skill-name", templ.KV("skill-name--inactive", skill.Allocated() == 0 && !skill.Grow) }>{ skill.Key }</div>
+			<div class={ "skill-name", templ.KV("skill-name--inactive", skill.Allocated() == 0 && !data.Grow) }>{ skill.Key }</div>
 			@SkillPointsBreakdown(skill, false)
 			@SkillTotal(skill, false)
 			<div class="skill-expand-icon">
@@ -669,6 +670,7 @@ templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
 
 // SkillPointsBreakdown shows job/hobby/perm+temp breakdown
 templ SkillPointsBreakdown(skill Skill, oob bool) {
+	{{ data := skill.Single }}
 	<div
 		class="skill-points-display"
 		id={ "skill-breakdown-" + skill.Key }
@@ -677,11 +679,11 @@ templ SkillPointsBreakdown(skill Skill, oob bool) {
 			hx-swap-oob="true"
 		}
 	>
-		<span class={ templ.KV("skill-points-zero", skill.Job == 0) }>{ fmt.Sprintf("%02d", skill.Job) }</span>
+		<span class={ templ.KV("skill-points-zero", data.Job == 0) }>{ fmt.Sprintf("%02d", data.Job) }</span>
 		<span>/</span>
-		<span class={ templ.KV("skill-points-zero", skill.Hobby == 0) }>{ fmt.Sprintf("%02d", skill.Hobby) }</span>
+		<span class={ templ.KV("skill-points-zero", data.Hobby == 0) }>{ fmt.Sprintf("%02d", data.Hobby) }</span>
 		<span>/</span>
-		<span class={ templ.KV("skill-points-zero", skill.Perm+skill.Temp == 0) }>{ fmt.Sprintf("%02d", skill.Perm+skill.Temp) }</span>
+		<span class={ templ.KV("skill-points-zero", data.Perm+data.Temp == 0) }>{ fmt.Sprintf("%02d", data.Perm+data.Temp) }</span>
 	</div>
 }
 
@@ -702,28 +704,29 @@ templ SkillTotal(skill Skill, oob bool) {
 // SkillDetail renders the expandable detail section for a skill
 templ SkillDetail(pc PageContext, skill Skill, remaining SkillPoints) {
 	{{
+		data := skill.Single
 		total := skill.Total()
-		jobMax := min(99-(total-skill.Job), skill.Job+remaining.Job)
-		hobbyMax := min(99-(total-skill.Hobby), skill.Hobby+remaining.Hobby)
-		permMax := 99 - (total - skill.Perm)
-		tempMax := 99 - (total - skill.Temp)
+		jobMax := min(99-(total-data.Job), data.Job+remaining.Job)
+		hobbyMax := min(99-(total-data.Hobby), data.Hobby+remaining.Hobby)
+		permMax := 99 - (total - data.Perm)
+		tempMax := 99 - (total - data.Temp)
 	}}
 	<div class="skill-detail">
 		<span class="skill-detail-label">職業P</span>
 		<div class="skill-detail-wrapper">
-			@NumberInput(skillInputConfig(skill.Key, "job", skill.Job, 0, jobMax, pc.IsReadOnly()))
+			@NumberInput(skillInputConfig(skill.Key, "job", data.Job, 0, jobMax, pc.IsReadOnly()))
 		</div>
 		<span class="skill-detail-label">興味P</span>
 		<div class="skill-detail-wrapper">
-			@NumberInput(skillInputConfig(skill.Key, "hobby", skill.Hobby, 0, hobbyMax, pc.IsReadOnly()))
+			@NumberInput(skillInputConfig(skill.Key, "hobby", data.Hobby, 0, hobbyMax, pc.IsReadOnly()))
 		</div>
 		<span class="skill-detail-label">増加分</span>
 		<div class="skill-detail-wrapper">
-			@NumberInput(skillInputConfig(skill.Key, "perm", skill.Perm, -(total - skill.Perm), permMax, pc.IsReadOnly()))
+			@NumberInput(skillInputConfig(skill.Key, "perm", data.Perm, -(total - data.Perm), permMax, pc.IsReadOnly()))
 		</div>
 		<span class="skill-detail-label">一時的</span>
 		<div class="skill-detail-wrapper">
-			@NumberInput(skillInputConfig(skill.Key, "temp", skill.Temp, -(total - skill.Temp), tempMax, pc.IsReadOnly()))
+			@NumberInput(skillInputConfig(skill.Key, "temp", data.Temp, -(total - data.Temp), tempMax, pc.IsReadOnly()))
 		</div>
 	</div>
 }
@@ -746,25 +749,26 @@ func skillInputConfig(skillKey, field string, value, minVal, maxVal int, readonl
 // SkillUpdateFragments returns the input wrapper plus OOB swaps for related displays
 templ SkillUpdateFragments(skill Skill, field string, remaining SkillPoints) {
 	{{
+		data := skill.Single
 		total := skill.Total()
 		var value, minVal, maxVal int
 		switch field {
 		case "job":
-			value = skill.Job
+			value = data.Job
 			minVal = 0
-			maxVal = min(99-(total-skill.Job), skill.Job+remaining.Job)
+			maxVal = min(99-(total-data.Job), data.Job+remaining.Job)
 		case "hobby":
-			value = skill.Hobby
+			value = data.Hobby
 			minVal = 0
-			maxVal = min(99-(total-skill.Hobby), skill.Hobby+remaining.Hobby)
+			maxVal = min(99-(total-data.Hobby), data.Hobby+remaining.Hobby)
 		case "perm":
-			value = skill.Perm
-			minVal = -(total - skill.Perm)
-			maxVal = 99 - (total - skill.Perm)
+			value = data.Perm
+			minVal = -(total - data.Perm)
+			maxVal = 99 - (total - data.Perm)
 		case "temp":
-			value = skill.Temp
-			minVal = -(total - skill.Temp)
-			maxVal = 99 - (total - skill.Temp)
+			value = data.Temp
+			minVal = -(total - data.Temp)
+			maxVal = 99 - (total - data.Temp)
 		}
 	}}
 	@NumberInput(skillInputConfig(skill.Key, field, value, minVal, maxVal, false))
@@ -801,10 +805,10 @@ templ SkillMulti(pc PageContext, skill Skill, remaining SkillPoints) {
 				}
 			</div>
 		</div>
-		if len(skill.Genres) > 0 {
+		if len(skill.Multi.Genres) > 0 {
 			<div class="skill-multi-genres">
-				for _, genre := range skill.Genres {
-					@SkillGenreRow(pc, skill.Key, genre, remaining)
+				for i, genre := range skill.Multi.Genres {
+					@SkillGenreRow(pc, skill.Key, skill.Init, i, genre, remaining)
 				}
 			</div>
 		} else if !pc.IsReadOnly() {
@@ -824,9 +828,10 @@ templ SkillMulti(pc PageContext, skill Skill, remaining SkillPoints) {
 }
 
 // SkillGenreRow renders a single genre within a multi-genre skill
-templ SkillGenreRow(pc PageContext, skillKey string, genre SkillGenre, remaining SkillPoints) {
-	{{ expanded := genre.Allocated() > 0 || genre.Grow }}
-	{{ genreID := fmt.Sprintf("%s-%d", skillKey, genre.Index) }}
+templ SkillGenreRow(pc PageContext, skillKey string, init int, index int, genre SkillGenre, remaining SkillPoints) {
+	{{ expanded := genre.Total() > 0 || genre.Grow }}
+	{{ genreID := fmt.Sprintf("%s-%d", skillKey, index) }}
+	{{ total := init + genre.Total() }}
 	<details class="genre-row" id={ "genre-row-" + genreID } open?={ expanded }>
 		<summary class="genre-header">
 			<button
@@ -834,7 +839,7 @@ templ SkillGenreRow(pc PageContext, skillKey string, genre SkillGenre, remaining
 				class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", genre.Grow) }
 				title="成長チェック"
 				disabled?={ pc.IsReadOnly() }
-				hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/grow", skillKey, genre.Index) }
+				hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/grow", skillKey, index) }
 				hx-target="#skills-panel"
 				hx-swap="outerHTML"
 				onclick="event.stopPropagation()"
@@ -852,7 +857,7 @@ templ SkillGenreRow(pc PageContext, skillKey string, genre SkillGenre, remaining
 					value={ genre.Label }
 					placeholder={ skillKey }
 					onclick="event.stopPropagation()"
-					hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/label", skillKey, genre.Index) }
+					hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/label", skillKey, index) }
 					hx-trigger="change"
 					hx-swap="none"
 					name="label"
@@ -867,13 +872,13 @@ templ SkillGenreRow(pc PageContext, skillKey string, genre SkillGenre, remaining
 				</span>
 			}
 			@GenrePointsBreakdown(genre)
-			<div class="genre-total" title="達成値合計">{ strconv.Itoa(genre.Total()) }</div>
+			<div class="genre-total" title="達成値合計">{ strconv.Itoa(total) }</div>
 			<div class="skill-expand-icon">
 				@icons.IconCaretDown()
 			</div>
 		</summary>
 		if !pc.IsReadOnly() {
-			@GenreDetail(pc, skillKey, genre, remaining)
+			@GenreDetail(pc, skillKey, init, index, genre, remaining)
 		}
 	</details>
 }
@@ -890,9 +895,10 @@ templ GenrePointsBreakdown(genre SkillGenre) {
 }
 
 // GenreDetail renders the expandable detail section for a genre
-templ GenreDetail(pc PageContext, skillKey string, genre SkillGenre, remaining SkillPoints) {
+templ GenreDetail(pc PageContext, skillKey string, init int, index int, genre SkillGenre, remaining SkillPoints) {
 	{{
-		total := genre.Total()
+		allocated := genre.Total()
+		total := init + allocated
 		jobMax := min(99-(total-genre.Job), genre.Job+remaining.Job)
 		hobbyMax := min(99-(total-genre.Hobby), genre.Hobby+remaining.Hobby)
 		permMax := 99 - (total - genre.Perm)
@@ -902,25 +908,25 @@ templ GenreDetail(pc PageContext, skillKey string, genre SkillGenre, remaining S
 		<div class="genre-detail-grid">
 			<span class="skill-detail-label">職業P</span>
 			<div class="skill-detail-wrapper">
-				@NumberInput(genreInputConfig(skillKey, genre.Index, "job", genre.Job, 0, jobMax, pc.IsReadOnly()))
+				@NumberInput(genreInputConfig(skillKey, index, "job", genre.Job, 0, jobMax, pc.IsReadOnly()))
 			</div>
 			<span class="skill-detail-label">興味P</span>
 			<div class="skill-detail-wrapper">
-				@NumberInput(genreInputConfig(skillKey, genre.Index, "hobby", genre.Hobby, 0, hobbyMax, pc.IsReadOnly()))
+				@NumberInput(genreInputConfig(skillKey, index, "hobby", genre.Hobby, 0, hobbyMax, pc.IsReadOnly()))
 			</div>
 			<span class="skill-detail-label">増加分</span>
 			<div class="skill-detail-wrapper">
-				@NumberInput(genreInputConfig(skillKey, genre.Index, "perm", genre.Perm, -(total - genre.Perm), permMax, pc.IsReadOnly()))
+				@NumberInput(genreInputConfig(skillKey, index, "perm", genre.Perm, -(total - genre.Perm), permMax, pc.IsReadOnly()))
 			</div>
 			<span class="skill-detail-label">一時的</span>
 			<div class="skill-detail-wrapper">
-				@NumberInput(genreInputConfig(skillKey, genre.Index, "temp", genre.Temp, -(total - genre.Temp), tempMax, pc.IsReadOnly()))
+				@NumberInput(genreInputConfig(skillKey, index, "temp", genre.Temp, -(total - genre.Temp), tempMax, pc.IsReadOnly()))
 			</div>
 		</div>
 		<button
 			type="button"
 			class="genre-delete-btn"
-			hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/delete", skillKey, genre.Index) }
+			hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/delete", skillKey, index) }
 			hx-target="#skills-panel"
 			hx-swap="outerHTML"
 			hx-confirm={ fmt.Sprintf("「%s」技能を削除しますか？", genreLabelOrKey(genre.Label, skillKey)) }
