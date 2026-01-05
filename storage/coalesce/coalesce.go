@@ -1,8 +1,9 @@
 // Package coalesce implements write coalescing storage.
-// Writes are buffered in SQLite and flushed to JSON files on read.
+// Writes are buffered in SQLite and flushed to a backend on read.
 package coalesce
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -16,24 +17,30 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// Store handles write coalescing with SQLite buffer and JSON file persistence.
+// Store handles write coalescing with SQLite buffer and pluggable backend persistence.
 type Store struct {
 	db      *sql.DB
-	dataDir string
+	backend Backend
 	mu      sync.Mutex
 }
 
 // Config for creating a new Store
 type Config struct {
-	DBPath  string // SQLite database path
-	DataDir string // Directory for JSON files
+	DBPath  string  // SQLite database path for write buffer
+	Backend Backend // Backend for persistent storage
 }
 
 // New creates a new coalescing store
 func New(cfg Config) (*Store, error) {
-	// Ensure data directory exists
-	if err := os.MkdirAll(cfg.DataDir, 0755); err != nil {
-		return nil, fmt.Errorf("create data dir: %w", err)
+	if cfg.Backend == nil {
+		return nil, fmt.Errorf("backend is required")
+	}
+
+	// Ensure directory exists for SQLite buffer
+	if dir := filepath.Dir(cfg.DBPath); dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return nil, fmt.Errorf("create buffer dir: %w", err)
+		}
 	}
 
 	// Open SQLite
@@ -59,7 +66,7 @@ func New(cfg Config) (*Store, error) {
 
 	return &Store{
 		db:      db,
-		dataDir: cfg.DataDir,
+		backend: cfg.Backend,
 	}, nil
 }
 
@@ -90,13 +97,18 @@ func (s *Store) Write(characterID, path string, value any) error {
 
 // Read returns the current state for a character, flushing any pending writes
 func (s *Store) Read(characterID string) (map[string]any, error) {
+	return s.ReadWithContext(context.Background(), characterID)
+}
+
+// ReadWithContext returns the current state for a character, flushing any pending writes
+func (s *Store) ReadWithContext(ctx context.Context, characterID string) (map[string]any, error) {
 	start := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Load from disk
+	// Load from backend
 	loadStart := time.Now()
-	data, err := s.loadFromDisk(characterID)
+	data, err := s.backend.Load(ctx, characterID)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +131,7 @@ func (s *Store) Read(characterID string) (map[string]any, error) {
 			setPath(data, p.path, p.value)
 		}
 
-		if err := s.saveToDisk(characterID, data); err != nil {
+		if err := s.backend.Save(ctx, characterID, data); err != nil {
 			return nil, err
 		}
 
@@ -175,45 +187,6 @@ func (s *Store) clearBuffer(characterID string) error {
 	if err != nil {
 		return fmt.Errorf("clear buffer: %w", err)
 	}
-	return nil
-}
-
-// loadFromDisk loads a character's JSON file
-func (s *Store) loadFromDisk(characterID string) (map[string]any, error) {
-	path := filepath.Join(s.dataDir, characterID+".json")
-	data, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("read file: %w", err)
-	}
-
-	var result map[string]any
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("unmarshal: %w", err)
-	}
-	return result, nil
-}
-
-// saveToDisk writes a character's JSON file
-func (s *Store) saveToDisk(characterID string, data map[string]any) error {
-	path := filepath.Join(s.dataDir, characterID+".json")
-
-	jsonData, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal: %w", err)
-	}
-
-	// Atomic write via temp file
-	tmpPath := path + ".tmp"
-	if err := os.WriteFile(tmpPath, jsonData, 0644); err != nil {
-		return fmt.Errorf("write temp: %w", err)
-	}
-	if err := os.Rename(tmpPath, path); err != nil {
-		return fmt.Errorf("rename: %w", err)
-	}
-
 	return nil
 }
 

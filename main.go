@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -72,6 +72,20 @@ func proxyWebSocket(w http.ResponseWriter, r *http.Request, targetHost string) {
 }
 
 func main() {
+	// Configure logging
+	logLevel := slog.LevelInfo
+	switch os.Getenv("LOG_LEVEL") {
+	case "debug", "DEBUG":
+		logLevel = slog.LevelDebug
+	case "warn", "WARN":
+		logLevel = slog.LevelWarn
+	case "error", "ERROR":
+		logLevel = slog.LevelError
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: logLevel,
+	})))
+
 	// Dev mode: notify reloader when server is ready (after ListenAndServe starts)
 	devMode := os.Getenv("DEV") == "1"
 
@@ -80,15 +94,42 @@ func main() {
 	if dataDir == "" {
 		dataDir = "data"
 	}
+
+	// Choose backend based on environment
+	var backend coalesce.Backend
+	if bucket := os.Getenv("GCS_BUCKET"); bucket != "" {
+		ctx := context.Background()
+		gcsBackend, err := coalesce.NewGCSBackend(ctx, coalesce.GCSBackendConfig{
+			Bucket: bucket,
+			Prefix: "characters/",
+		})
+		if err != nil {
+			slog.Error("Failed to initialize GCS backend", "error", err)
+			os.Exit(1)
+		}
+		backend = gcsBackend
+		// Use /tmp for SQLite buffer in Cloud Run (filesystem is read-only except /tmp)
+		dataDir = "/tmp/charaxiv"
+		slog.Info("Coalesce backend: GCS", "bucket", bucket, "bufferDir", dataDir)
+	} else {
+		diskBackend, err := coalesce.NewDiskBackend(filepath.Join(dataDir, "characters"))
+		if err != nil {
+			slog.Error("Failed to initialize disk backend", "error", err)
+			os.Exit(1)
+		}
+		backend = diskBackend
+		slog.Info("Coalesce backend: disk", "dataDir", dataDir)
+	}
+
 	cs, err := coalesce.New(coalesce.Config{
 		DBPath:  filepath.Join(dataDir, "buffer.db"),
-		DataDir: filepath.Join(dataDir, "characters"),
+		Backend: backend,
 	})
 	if err != nil {
-		log.Fatalf("Failed to initialize coalesce store: %v", err)
+		slog.Error("Failed to initialize coalesce store", "error", err)
+		os.Exit(1)
 	}
 	defer cs.Close()
-	log.Printf("Coalesce store initialized: %s", dataDir)
 
 	// Initialize storage
 	var store storage.Storage
@@ -98,15 +139,14 @@ func main() {
 			Bucket: bucket,
 		})
 		if err != nil {
-			log.Printf("Warning: Failed to initialize GCS client: %v", err)
-			log.Printf("Falling back to in-memory storage")
+			slog.Warn("Failed to initialize GCS client, falling back to in-memory storage", "error", err)
 			store = storage.NewMemoryStorage()
 		} else {
 			store = client
-			log.Printf("GCS storage initialized for bucket: %s", bucket)
+			slog.Info("GCS storage initialized", "bucket", bucket)
 		}
 	} else {
-		log.Printf("GCS_BUCKET not set, using in-memory storage")
+		slog.Info("GCS_BUCKET not set, using in-memory storage")
 		store = storage.NewMemoryStorage()
 	}
 
@@ -187,19 +227,26 @@ func main() {
 		port = p
 	}
 
-	log.Printf("Starting server on :%s", port)
+	slog.Info("Starting server", "port", port)
 
 	if devMode {
 		// Use a listener so we can trigger reload AFTER server starts listening
 		ln, err := net.Listen("tcp", ":"+port)
 		if err != nil {
-			log.Fatal(err)
+			slog.Error("Failed to listen", "error", err)
+			os.Exit(1)
 		}
-		log.Printf("Server listening, triggering reload...")
+		slog.Debug("Server listening, triggering reload")
 		// Now trigger reload - server is definitely listening
 		go http.Get("http://localhost:8001/reload")
-		log.Fatal(http.Serve(ln, r))
+		if err := http.Serve(ln, r); err != nil {
+			slog.Error("Server error", "error", err)
+			os.Exit(1)
+		}
 	} else {
-		log.Fatal(http.ListenAndServe(":"+port, r))
+		if err := http.ListenAndServe(":"+port, r); err != nil {
+			slog.Error("Server error", "error", err)
+			os.Exit(1)
+		}
 	}
 }

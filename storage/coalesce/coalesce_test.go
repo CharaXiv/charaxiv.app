@@ -14,9 +14,15 @@ func TestStore(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
+	dataDir := filepath.Join(tmpDir, "data")
+	backend, err := NewDiskBackend(dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	store, err := New(Config{
 		DBPath:  filepath.Join(tmpDir, "buffer.db"),
-		DataDir: filepath.Join(tmpDir, "data"),
+		Backend: backend,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -37,7 +43,7 @@ func TestStore(t *testing.T) {
 	}
 
 	// Verify file doesn't exist yet
-	filePath := filepath.Join(tmpDir, "data", charID+".json")
+	filePath := filepath.Join(dataDir, charID+".json")
 	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
 		t.Error("expected JSON file to NOT exist before read")
 	}
@@ -66,9 +72,14 @@ func TestStore(t *testing.T) {
 
 	// Verify buffer is cleared (second read should not have pending writes)
 	store.Close()
+
+	backend2, err := NewDiskBackend(dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	store2, err := New(Config{
 		DBPath:  filepath.Join(tmpDir, "buffer.db"),
-		DataDir: filepath.Join(tmpDir, "data"),
+		Backend: backend2,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -93,9 +104,14 @@ func TestWriteCoalescing(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
+	backend, err := NewDiskBackend(filepath.Join(tmpDir, "data"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	store, err := New(Config{
 		DBPath:  filepath.Join(tmpDir, "buffer.db"),
-		DataDir: filepath.Join(tmpDir, "data"),
+		Backend: backend,
 	})
 	if err != nil {
 		t.Fatal(err)
