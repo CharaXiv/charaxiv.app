@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 func TestStore(t *testing.T) {
@@ -15,11 +14,9 @@ func TestStore(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Create store with short flush interval for testing
 	store, err := New(Config{
-		DBPath:        filepath.Join(tmpDir, "buffer.db"),
-		DataDir:       filepath.Join(tmpDir, "data"),
-		FlushInterval: 100 * time.Millisecond,
+		DBPath:  filepath.Join(tmpDir, "buffer.db"),
+		DataDir: filepath.Join(tmpDir, "data"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -28,7 +25,7 @@ func TestStore(t *testing.T) {
 
 	charID := "char-123"
 
-	// Write some data
+	// Write some data (buffered, not yet on disk)
 	if err := store.Write(charID, "name", "テストキャラ"); err != nil {
 		t.Fatal(err)
 	}
@@ -39,44 +36,46 @@ func TestStore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Read immediately (from cache)
+	// Verify file doesn't exist yet
+	filePath := filepath.Join(tmpDir, "data", charID+".json")
+	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+		t.Error("expected JSON file to NOT exist before read")
+	}
+
+	// Read triggers flush
 	data, err := store.Read(charID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// Verify data
 	if data["name"] != "テストキャラ" {
 		t.Errorf("expected name=テストキャラ, got %v", data["name"])
 	}
 
 	skills := data["skills"].(map[string]any)
 	kaihi := skills["回避"].(map[string]any)
-	if kaihi["job"] != float64(5) { // JSON numbers are float64
+	if kaihi["job"] != float64(5) {
 		t.Errorf("expected skills.回避.job=5, got %v", kaihi["job"])
 	}
 
-	// Wait for flush
-	time.Sleep(200 * time.Millisecond)
-
-	// Verify file was written
-	filePath := filepath.Join(tmpDir, "data", charID+".json")
+	// Verify file now exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		t.Error("expected JSON file to be written")
+		t.Error("expected JSON file to exist after read")
 	}
 
-	// Create new store instance (simulates restart)
+	// Verify buffer is cleared (second read should not have pending writes)
 	store.Close()
 	store2, err := New(Config{
-		DBPath:        filepath.Join(tmpDir, "buffer.db"),
-		DataDir:       filepath.Join(tmpDir, "data"),
-		FlushInterval: 100 * time.Millisecond,
+		DBPath:  filepath.Join(tmpDir, "buffer.db"),
+		DataDir: filepath.Join(tmpDir, "data"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer store2.Close()
 
-	// Read from new store (should load from disk)
+	// Read from new store
 	data2, err := store2.Read(charID)
 	if err != nil {
 		t.Fatal(err)
@@ -84,6 +83,38 @@ func TestStore(t *testing.T) {
 
 	if data2["name"] != "テストキャラ" {
 		t.Errorf("after restart: expected name=テストキャラ, got %v", data2["name"])
+	}
+}
+
+func TestWriteCoalescing(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "coalesce-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	store, err := New(Config{
+		DBPath:  filepath.Join(tmpDir, "buffer.db"),
+		DataDir: filepath.Join(tmpDir, "data"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	charID := "char-456"
+
+	// Multiple writes to same path - last one wins
+	store.Write(charID, "skills.回避.job", 1)
+	store.Write(charID, "skills.回避.job", 2)
+	store.Write(charID, "skills.回避.job", 3)
+
+	data, _ := store.Read(charID)
+	skills := data["skills"].(map[string]any)
+	kaihi := skills["回避"].(map[string]any)
+
+	if kaihi["job"] != float64(3) {
+		t.Errorf("expected coalesced value 3, got %v", kaihi["job"])
 	}
 }
 
