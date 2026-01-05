@@ -11,7 +11,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"sort"
 	"strings"
 	"time"
 
@@ -44,137 +43,6 @@ func buildPageContext(store *models.Store) shared.PageContext {
 		ctx.Memos[id] = store.GetMemo(id)
 	}
 	return ctx
-}
-
-// buildSheetState creates a SheetState from model data and page context
-func buildSheetState(pc shared.PageContext, status *cthulhu6.Status, skills *cthulhu6.Skills) shared.SheetState {
-	vars, computed, params, db, skillCategories, skillExtra, skillPoints := statusToTemplates(status, skills)
-	return shared.SheetState{
-		PC: pc,
-		Status: shared.StatusState{
-			Variables:   vars,
-			Computed:    computed,
-			Parameters:  params,
-			DamageBonus: db,
-		},
-		Skills: shared.SkillsState{
-			Categories: skillCategories,
-			Extra:      skillExtra,
-			Remaining:  skillPoints,
-		},
-	}
-}
-
-// statusToTemplates converts model status to template types
-func statusToTemplates(status *cthulhu6.Status, skills *cthulhu6.Skills) ([]shared.StatusVariable, []shared.ComputedValue, []shared.StatusParameter, string, []shared.SkillCategory, shared.SkillExtra, shared.SkillPoints) {
-	// Variables in display order
-	varOrder := []string{"STR", "CON", "POW", "DEX", "APP", "SIZ", "INT", "EDU"}
-	variables := make([]shared.StatusVariable, 0, len(varOrder))
-	for _, key := range varOrder {
-		v := status.Variables[key]
-		variables = append(variables, shared.StatusVariable{
-			Key:  key,
-			Base: v.Base,
-			Perm: v.Perm,
-			Temp: v.Temp,
-			Min:  v.Min,
-			Max:  v.Max,
-		})
-	}
-
-	// Computed values in display order
-	computedOrder := []string{"初期SAN", "アイデア", "幸運", "知識", "職業P", "興味P"}
-	computedMap := status.ComputedValues()
-	computed := make([]shared.ComputedValue, 0, len(computedOrder))
-	for _, key := range computedOrder {
-		computed = append(computed, shared.ComputedValue{
-			Key:   key,
-			Value: computedMap[key],
-		})
-	}
-
-	// Parameters
-	paramOrder := []string{"HP", "MP", "SAN"}
-	defaults := status.DefaultParameters()
-	parameters := make([]shared.StatusParameter, 0, len(paramOrder))
-	for _, key := range paramOrder {
-		var val *int
-		if v := status.Parameters[key]; v != nil {
-			val = v
-		}
-		parameters = append(parameters, shared.StatusParameter{
-			Key:          key,
-			Value:        val,
-			DefaultValue: defaults[key],
-		})
-	}
-
-	// Skills - build from categories
-	categoryOrder := cthulhu6.CategoryOrder
-
-	skillCategories := make([]shared.SkillCategory, 0, len(categoryOrder))
-	for _, cat := range categoryOrder {
-		catData := skills.Categories[cat]
-		var singleSkills, multiSkills []shared.Skill
-		for key, s := range catData.Skills {
-			init := status.SkillInitialValue(key)
-			skill := shared.Skill{
-				Key:       key,
-				Category:  string(cat),
-				Init:      init,
-				Order:     s.Order,
-				Essential: cthulhu6.IsEssentialSkill(key),
-			}
-			if s.IsMulti() {
-				genres := make([]shared.SkillGenre, len(s.Multi.Genres))
-				for i, g := range s.Multi.Genres {
-					genres[i] = shared.SkillGenre{
-						Label: g.Label,
-						Job:   g.Job,
-						Hobby: g.Hobby,
-						Perm:  g.Perm,
-						Temp:  g.Temp,
-						Grow:  g.Grow,
-					}
-				}
-				skill.Multi = &shared.MultiSkillData{Genres: genres}
-				multiSkills = append(multiSkills, skill)
-			} else if s.IsSingle() {
-				skill.Single = &shared.SingleSkillData{
-					Job:   s.Single.Job,
-					Hobby: s.Single.Hobby,
-					Perm:  s.Single.Perm,
-					Temp:  s.Single.Temp,
-					Grow:  s.Single.Grow,
-				}
-				singleSkills = append(singleSkills, skill)
-			}
-		}
-		sort.Slice(singleSkills, func(i, j int) bool {
-			return singleSkills[i].Order < singleSkills[j].Order
-		})
-		sort.Slice(multiSkills, func(i, j int) bool {
-			return multiSkills[i].Order < multiSkills[j].Order
-		})
-		skillCategories = append(skillCategories, shared.SkillCategory{
-			Name:         string(cat),
-			SingleSkills: singleSkills,
-			MultiSkills:  multiSkills,
-		})
-	}
-
-	skillExtra := shared.SkillExtra{
-		Job:   skills.Extra.Job,
-		Hobby: skills.Extra.Hobby,
-	}
-
-	remJob, remHobby := status.RemainingPoints(skills)
-	skillPoints := shared.SkillPoints{
-		Job:   remJob,
-		Hobby: remHobby,
-	}
-
-	return variables, computed, parameters, status.DamageBonus(), skillCategories, skillExtra, skillPoints
 }
 
 // proxyWebSocket proxies a WebSocket connection to the target host.
@@ -306,7 +174,7 @@ func main() {
 		pc := buildPageContext(charStore)
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		state := buildSheetState(pc, status, skills)
+		state := cthulhu6.BuildSheetState(pc, status, skills)
 		return pages.CharacterSheet(state)
 	}))
 
@@ -375,7 +243,7 @@ func main() {
 		pc := shared.NewPageContext()
 		status = charStore.GetStatus()
 		skills := charStore.GetSkills()
-		state := buildSheetState(pc, status, skills)
+		state := cthulhu6.BuildSheetState(pc, status, skills)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 		// For DEX/EDU changes, also update skills panel (回避 depends on DEX, 母国語 depends on EDU)
@@ -425,7 +293,7 @@ func main() {
 		pc := shared.NewPageContext()
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		state := buildSheetState(pc, status, skills)
+		state := cthulhu6.BuildSheetState(pc, status, skills)
 		return components.SkillsPanel(state, true)
 	}))
 
@@ -467,22 +335,9 @@ func main() {
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		updatedSkill, _ := charStore.GetSkill(key)
-		remJob, remHobby := status.RemainingPoints(skills)
 
-		templSkill := shared.Skill{
-			Key:       key,
-			Init:      status.SkillInitialValue(key),
-			Order:     updatedSkill.Order,
-			Essential: cthulhu6.IsEssentialSkill(key),
-			Single: &shared.SingleSkillData{
-				Job:   updatedSkill.Single.Job,
-				Hobby: updatedSkill.Single.Hobby,
-				Perm:  updatedSkill.Single.Perm,
-				Temp:  updatedSkill.Single.Temp,
-				Grow:  updatedSkill.Single.Grow,
-			},
-		}
-		remaining := shared.SkillPoints{Job: remJob, Hobby: remHobby}
+		templSkill := cthulhu6.BuildSkill(status, key, updatedSkill)
+		remaining := cthulhu6.BuildRemainingPoints(status, skills)
 
 		return components.SkillUpdateFragments(templSkill, field, remaining)
 	}))
@@ -503,7 +358,7 @@ func main() {
 		pc := shared.NewPageContext()
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		state := buildSheetState(pc, status, skills)
+		state := cthulhu6.BuildSheetState(pc, status, skills)
 		return components.SkillsPanel(state, true)
 	}))
 
@@ -526,7 +381,7 @@ func main() {
 		pc := shared.NewPageContext()
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		state := buildSheetState(pc, status, skills)
+		state := cthulhu6.BuildSheetState(pc, status, skills)
 		return components.SkillsPanel(state, true)
 	}))
 
@@ -548,7 +403,7 @@ func main() {
 		pc := shared.NewPageContext()
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		state := buildSheetState(pc, status, skills)
+		state := cthulhu6.BuildSheetState(pc, status, skills)
 		return components.SkillsPanel(state, true)
 	}))
 
@@ -612,7 +467,7 @@ func main() {
 		pc := shared.NewPageContext()
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		state := buildSheetState(pc, status, skills)
+		state := cthulhu6.BuildSheetState(pc, status, skills)
 		return components.SkillsPanel(state, true)
 	}))
 
@@ -643,7 +498,7 @@ func main() {
 			pc := shared.NewPageContext()
 			status := charStore.GetStatus()
 			skills = charStore.GetSkills()
-			state := buildSheetState(pc, status, skills)
+			state := cthulhu6.BuildSheetState(pc, status, skills)
 			return components.SkillsPanelWithPoints(state)
 		}
 
@@ -659,7 +514,7 @@ func main() {
 			pc := shared.NewPageContext()
 			status := charStore.GetStatus()
 			skills := charStore.GetSkills()
-			state := buildSheetState(pc, status, skills)
+			state := cthulhu6.BuildSheetState(pc, status, skills)
 			return components.StatusPanel(state, true)
 		}
 
@@ -678,7 +533,7 @@ func main() {
 
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
-		state := buildSheetState(pc, status, skills)
+		state := cthulhu6.BuildSheetState(pc, status, skills)
 
 		// For DEX/EDU changes, also update skills panel (回避 depends on DEX, 母国語 depends on EDU)
 		// For INT/EDU changes, also update skill points display
