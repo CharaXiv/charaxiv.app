@@ -41,6 +41,35 @@ See `CONTRACT.md` for hard complexity caps.
 - **No JS frameworks**: HTMX + templ for interactivity
 - **Co-located styles**: CSS in templ files using `OnceHandle`
 - **OOB swaps**: For updating multiple page regions from one response
+- **Write coalescing**: Fast writes to SQLite, flush to JSON on read
+
+### Storage Architecture
+
+The hypertext (UI state) is the source of truth. Storage just persists it.
+
+```
+Write path (~1ms):
+  POST {path: "skills.回避.job", value: 5}
+    → INSERT INTO write_buffer (SQLite)
+    → 200 OK
+
+Read path (page load):
+  GET /character/{id}
+    → Load JSON from GCS/disk
+    → Apply pending writes from buffer
+    → Save updated JSON (flush)
+    → Clear buffer
+    → Return response
+```
+
+**Why this model:**
+- Fast ack to user (SQLite write is ~1ms)
+- No background goroutines or timers
+- Flush happens naturally on page load
+- SQLite buffer is durable (survives crashes)
+- GCS writes are amortized into page load latency
+
+See `storage/coalesce/` for implementation.
 
 ### OOB Swaps vs Chunk Replacement
 
