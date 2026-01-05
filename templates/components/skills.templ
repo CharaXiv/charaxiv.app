@@ -276,9 +276,17 @@ templ SkillsPanelContent(state SheetState) {
 				text-overflow: ellipsis;
 			}
 
+			.skill-name--essential {
+				font-weight: var(--font-weight-bold);
+			}
+
 			.skill-name--inactive {
 				font-weight: var(--font-weight-normal);
 				color: var(--slate-400);
+			}
+
+			.skill-name--inactive.skill-name--essential {
+				font-weight: var(--font-weight-semibold);
 			}
 
 			.skill-points-display {
@@ -368,6 +376,10 @@ templ SkillsPanelContent(state SheetState) {
 			.skill-multi-name {
 				font-weight: var(--font-weight-semibold);
 				color: var(--slate-900);
+			}
+
+			.skill-multi-name--essential {
+				font-weight: var(--font-weight-bold);
 			}
 
 			.skill-multi-init {
@@ -672,7 +684,7 @@ templ SkillName(skill Skill, oob bool) {
 	{{ data := skill.Single }}
 	{{ inactive := skill.Allocated() == 0 && !data.Grow }}
 	<div
-		class={ "skill-name", templ.KV("skill-name--inactive", inactive) }
+		class={ "skill-name", templ.KV("skill-name--essential", skill.Essential), templ.KV("skill-name--inactive", inactive) }
 		id={ "skill-name-" + skill.Key }
 		if oob {
 			hx-swap-oob="true"
@@ -803,7 +815,7 @@ func min(a, b int) int {
 templ SkillMulti(pc PageContext, skill Skill, remaining SkillPoints) {
 	<div class="skill-multi" id={ "skill-multi-" + skill.Key }>
 		<div class="skill-multi-header">
-			<span class="skill-multi-name">{ skill.Key }</span>
+			<span class={ "skill-multi-name", templ.KV("skill-multi-name--essential", skill.Essential) }>{ skill.Key }</span>
 			<div style="display: flex; align-items: center; gap: var(--space-2);">
 				<span class="skill-multi-init" title="初期値">{ strconv.Itoa(skill.Init) }</span>
 				if !pc.IsReadOnly() {

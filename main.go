@@ -124,10 +124,11 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 		for key, s := range catData.Skills {
 			init := status.SkillInitialValue(key)
 			skill := shared.Skill{
-				Key:      key,
-				Category: string(cat),
-				Init:     init,
-				Order:    s.Order,
+				Key:       key,
+				Category:  string(cat),
+				Init:      init,
+				Order:     s.Order,
+				Essential: models.IsEssentialSkill(key),
 			}
 			if s.IsMulti() {
 				genres := make([]shared.SkillGenre, len(s.Multi.Genres))
@@ -474,9 +475,10 @@ func main() {
 		remJob, remHobby := status.RemainingPoints(skills)
 
 		templSkill := shared.Skill{
-			Key:   key,
-			Init:  status.SkillInitialValue(key),
-			Order: updatedSkill.Order,
+			Key:       key,
+			Init:      status.SkillInitialValue(key),
+			Order:     updatedSkill.Order,
+			Essential: models.IsEssentialSkill(key),
 			Single: &shared.SingleSkillData{
 				Job:   updatedSkill.Single.Job,
 				Hobby: updatedSkill.Single.Hobby,

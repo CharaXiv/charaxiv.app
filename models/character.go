@@ -327,6 +327,25 @@ func NewCthulhu6Skills() *Cthulhu6Skills {
 	}
 }
 
+// Cthulhu6EssentialSkills lists skills that should be shown in bold
+var Cthulhu6EssentialSkills = map[string]bool{
+	"回避":   true,
+	"キック":  true,
+	"組み付き": true,
+	"こぶし":  true,
+	"頭突き":  true,
+	"目星":   true,
+	"聞き耳":  true,
+	"図書館":  true,
+	"応急手当": true,
+	"母国語":  true,
+}
+
+// IsEssentialSkill returns true if the skill is an essential/important skill
+func IsEssentialSkill(skillKey string) bool {
+	return Cthulhu6EssentialSkills[skillKey]
+}
+
 // SkillInitialValue returns the initial value for a skill based on character stats
 func (s *Cthulhu6Status) SkillInitialValue(skillKey string) int {
 	switch skillKey {

@@ -86,12 +86,13 @@ type MultiSkillData struct {
 
 // Skill represents a skill (exactly one of Single or Multi will be non-nil)
 type Skill struct {
-	Key      string           // skill key/name
-	Category string           // skill category (e.g., "戦闘技能")
-	Init     int              // initial value (from character stats)
-	Order    int              // display order within category
-	Single   *SingleSkillData // non-nil for single skills
-	Multi    *MultiSkillData  // non-nil for multi-genre skills
+	Key       string           // skill key/name
+	Category  string           // skill category (e.g., "戦闘技能")
+	Init      int              // initial value (from character stats)
+	Order     int              // display order within category
+	Essential bool             // true for important/essential skills (shown bold)
+	Single    *SingleSkillData // non-nil for single skills
+	Multi     *MultiSkillData  // non-nil for multi-genre skills
 }
 
 // IsSingle returns true if this is a single skill
