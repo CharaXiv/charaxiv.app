@@ -1,33 +1,37 @@
 package models
 
-import "sync"
+import (
+	"sync"
+
+	"charaxiv/systems/cthulhu6"
+)
 
 // Store holds the in-memory character data
 type Store struct {
 	mu     sync.RWMutex
-	status *Cthulhu6Status
-	skills *Cthulhu6Skills
+	status *cthulhu6.Status
+	skills *cthulhu6.Skills
 	memos  map[string]string
 }
 
 // NewStore creates a new store with default data
 func NewStore() *Store {
 	return &Store{
-		status: NewCthulhu6Status(),
-		skills: NewCthulhu6Skills(),
+		status: cthulhu6.NewStatus(),
+		skills: cthulhu6.NewSkills(),
 		memos:  make(map[string]string),
 	}
 }
 
 // GetStatus returns the current status
-func (s *Store) GetStatus() *Cthulhu6Status {
+func (s *Store) GetStatus() *cthulhu6.Status {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.status
 }
 
 // UpdateVariableBase updates a variable's base value
-func (s *Store) UpdateVariableBase(key string, delta int) *Variable {
+func (s *Store) UpdateVariableBase(key string, delta int) *cthulhu6.Variable {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -47,7 +51,7 @@ func (s *Store) UpdateVariableBase(key string, delta int) *Variable {
 }
 
 // SetVariableBase sets a variable's base value directly
-func (s *Store) SetVariableBase(key string, value int) *Variable {
+func (s *Store) SetVariableBase(key string, value int) *cthulhu6.Variable {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -116,7 +120,7 @@ func (s *Store) SetMemo(id string, value string) bool {
 }
 
 // GetSkills returns the current skills
-func (s *Store) GetSkills() *Cthulhu6Skills {
+func (s *Store) GetSkills() *cthulhu6.Skills {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.skills
@@ -131,7 +135,7 @@ func (s *Store) SetSkillExtra(job, hobby int) {
 }
 
 // UpdateSkill updates a skill's values (searches all categories)
-func (s *Store) UpdateSkill(key string, skill Cthulhu6Skill) {
+func (s *Store) UpdateSkill(key string, skill cthulhu6.Skill) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for cat, catData := range s.skills.Categories {
@@ -144,7 +148,7 @@ func (s *Store) UpdateSkill(key string, skill Cthulhu6Skill) {
 }
 
 // GetSkill returns a skill by key (searches all categories)
-func (s *Store) GetSkill(key string) (Cthulhu6Skill, bool) {
+func (s *Store) GetSkill(key string) (cthulhu6.Skill, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for _, catData := range s.skills.Categories {
@@ -152,5 +156,5 @@ func (s *Store) GetSkill(key string) (Cthulhu6Skill, bool) {
 			return skill, true
 		}
 	}
-	return Cthulhu6Skill{}, false
+	return cthulhu6.Skill{}, false
 }

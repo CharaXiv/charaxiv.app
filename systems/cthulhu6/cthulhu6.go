@@ -1,4 +1,5 @@
-package models
+// Package cthulhu6 implements the Call of Cthulhu 6th Edition game system.
+package cthulhu6
 
 // Variable represents an ability score with base, perm, and temp modifiers
 type Variable struct {
@@ -14,16 +15,16 @@ func (v Variable) Sum() int {
 	return v.Base + v.Perm + v.Temp
 }
 
-// Cthulhu6Status represents the status section for CoC 6th edition
-type Cthulhu6Status struct {
+// Status represents the status section for CoC 6th edition
+type Status struct {
 	Variables  map[string]Variable `json:"variables"`
 	Parameters map[string]*int     `json:"parameters"` // nil means use default
 	DB         string              `json:"db"`
 }
 
-// NewCthulhu6Status creates a new status with default values
-func NewCthulhu6Status() *Cthulhu6Status {
-	return &Cthulhu6Status{
+// NewStatus creates a new status with default values
+func NewStatus() *Status {
+	return &Status{
 		Variables: map[string]Variable{
 			"STR": {Base: 10, Perm: 0, Temp: 0, Min: 3, Max: 18},
 			"CON": {Base: 12, Perm: 0, Temp: 0, Min: 3, Max: 18},
@@ -44,7 +45,7 @@ func NewCthulhu6Status() *Cthulhu6Status {
 }
 
 // ComputedValues returns the derived values from variables
-func (s *Cthulhu6Status) ComputedValues() map[string]int {
+func (s *Status) ComputedValues() map[string]int {
 	pow := s.Variables["POW"].Sum()
 	inT := s.Variables["INT"].Sum()
 	edu := s.Variables["EDU"].Sum()
@@ -60,7 +61,7 @@ func (s *Cthulhu6Status) ComputedValues() map[string]int {
 }
 
 // DefaultParameters returns the default parameter values derived from variables
-func (s *Cthulhu6Status) DefaultParameters() map[string]int {
+func (s *Status) DefaultParameters() map[string]int {
 	con := s.Variables["CON"].Sum()
 	pow := s.Variables["POW"].Sum()
 	siz := s.Variables["SIZ"].Sum()
@@ -73,7 +74,7 @@ func (s *Cthulhu6Status) DefaultParameters() map[string]int {
 }
 
 // DamageBonus calculates the damage bonus from STR+SIZ
-func (s *Cthulhu6Status) DamageBonus() string {
+func (s *Status) DamageBonus() string {
 	if s.DB != "" {
 		return s.DB
 	}
@@ -96,13 +97,13 @@ func (s *Cthulhu6Status) DamageBonus() string {
 }
 
 // Indefinite calculates the indefinite insanity threshold
-func (s *Cthulhu6Status) Indefinite() int {
+func (s *Status) Indefinite() int {
 	san := s.EffectiveParameter("SAN")
 	return (san * 4) / 5
 }
 
 // EffectiveParameter returns the parameter value or its default
-func (s *Cthulhu6Status) EffectiveParameter(key string) int {
+func (s *Status) EffectiveParameter(key string) int {
 	if val := s.Parameters[key]; val != nil {
 		return *val
 	}
@@ -120,26 +121,17 @@ const (
 	SkillCategoryKnowledge     SkillCategory = "知識技能"
 )
 
-// SkillCategoryOrder returns the display order for a category
-func SkillCategoryOrder(cat SkillCategory) int {
-	switch cat {
-	case SkillCategoryCombat:
-		return 0
-	case SkillCategoryInvestigation:
-		return 1
-	case SkillCategoryAction:
-		return 2
-	case SkillCategorySocial:
-		return 3
-	case SkillCategoryKnowledge:
-		return 4
-	default:
-		return 99
-	}
+// CategoryOrder returns the display order for skill categories
+var CategoryOrder = []SkillCategory{
+	SkillCategoryCombat,
+	SkillCategoryInvestigation,
+	SkillCategoryAction,
+	SkillCategorySocial,
+	SkillCategoryKnowledge,
 }
 
-// Cthulhu6SingleSkill represents a simple skill with point allocations
-type Cthulhu6SingleSkill struct {
+// SingleSkill represents a simple skill with point allocations
+type SingleSkill struct {
 	Job   int  `json:"job"`
 	Hobby int  `json:"hobby"`
 	Perm  int  `json:"perm"`
@@ -148,12 +140,12 @@ type Cthulhu6SingleSkill struct {
 }
 
 // Sum returns total allocated points
-func (s *Cthulhu6SingleSkill) Sum() int {
+func (s *SingleSkill) Sum() int {
 	return s.Job + s.Hobby + s.Perm + s.Temp
 }
 
-// Cthulhu6SkillGenre represents one specialty within a multi-genre skill
-type Cthulhu6SkillGenre struct {
+// SkillGenre represents one specialty within a multi-genre skill
+type SkillGenre struct {
 	Label string `json:"label"` // e.g., "自動車" for 運転
 	Job   int    `json:"job"`
 	Hobby int    `json:"hobby"`
@@ -163,17 +155,17 @@ type Cthulhu6SkillGenre struct {
 }
 
 // Sum returns total allocated points for this genre
-func (g *Cthulhu6SkillGenre) Sum() int {
+func (g *SkillGenre) Sum() int {
 	return g.Job + g.Hobby + g.Perm + g.Temp
 }
 
-// Cthulhu6MultiSkill represents a skill with multiple specialties
-type Cthulhu6MultiSkill struct {
-	Genres []Cthulhu6SkillGenre `json:"genres"`
+// MultiSkill represents a skill with multiple specialties
+type MultiSkill struct {
+	Genres []SkillGenre `json:"genres"`
 }
 
 // TotalPoints returns sum of all genre points
-func (m *Cthulhu6MultiSkill) TotalPoints() (job, hobby int) {
+func (m *MultiSkill) TotalPoints() (job, hobby int) {
 	for _, g := range m.Genres {
 		job += g.Job
 		hobby += g.Hobby
@@ -181,64 +173,64 @@ func (m *Cthulhu6MultiSkill) TotalPoints() (job, hobby int) {
 	return
 }
 
-// Cthulhu6Skill wraps either a single or multi skill (exactly one will be non-nil)
-type Cthulhu6Skill struct {
-	Order  int                  `json:"order"`
-	Single *Cthulhu6SingleSkill `json:"single,omitempty"`
-	Multi  *Cthulhu6MultiSkill  `json:"multi,omitempty"`
+// Skill wraps either a single or multi skill (exactly one will be non-nil)
+type Skill struct {
+	Order  int          `json:"order"`
+	Single *SingleSkill `json:"single,omitempty"`
+	Multi  *MultiSkill  `json:"multi,omitempty"`
 }
 
 // IsSingle returns true if this is a single skill
-func (s Cthulhu6Skill) IsSingle() bool {
+func (s Skill) IsSingle() bool {
 	return s.Single != nil
 }
 
 // IsMulti returns true if this is a multi-genre skill
-func (s Cthulhu6Skill) IsMulti() bool {
+func (s Skill) IsMulti() bool {
 	return s.Multi != nil
 }
 
-// Cthulhu6SkillExtra represents extra skill points
-type Cthulhu6SkillExtra struct {
+// SkillExtra represents extra skill points
+type SkillExtra struct {
 	Job   int `json:"job"`
 	Hobby int `json:"hobby"`
 }
 
-// Cthulhu6SkillCategoryData represents a category of skills
-type Cthulhu6SkillCategoryData struct {
-	Skills map[string]Cthulhu6Skill `json:"skills"`
-	Order  int                      `json:"order"`
+// SkillCategoryData represents a category of skills
+type SkillCategoryData struct {
+	Skills map[string]Skill `json:"skills"`
+	Order  int              `json:"order"`
 }
 
-// Cthulhu6Skills represents all skills for a character
-type Cthulhu6Skills struct {
-	Categories map[SkillCategory]Cthulhu6SkillCategoryData `json:"categories"`
-	Custom     []Cthulhu6Skill                             `json:"custom"`
-	Extra      Cthulhu6SkillExtra                          `json:"extra"`
+// Skills represents all skills for a character
+type Skills struct {
+	Categories map[SkillCategory]SkillCategoryData `json:"categories"`
+	Custom     []Skill                             `json:"custom"`
+	Extra      SkillExtra                          `json:"extra"`
 }
 
 // singleSkill creates a single skill
-func singleSkill(order int) Cthulhu6Skill {
-	return Cthulhu6Skill{Order: order, Single: &Cthulhu6SingleSkill{}}
+func singleSkill(order int) Skill {
+	return Skill{Order: order, Single: &SingleSkill{}}
 }
 
 // multiSkill creates an empty multi-genre skill
-func multiSkill(order int) Cthulhu6Skill {
-	return Cthulhu6Skill{Order: order, Multi: &Cthulhu6MultiSkill{Genres: []Cthulhu6SkillGenre{}}}
+func multiSkill(order int) Skill {
+	return Skill{Order: order, Multi: &MultiSkill{Genres: []SkillGenre{}}}
 }
 
 // multiSkillWithGenre creates a multi-genre skill with one initial genre
-func multiSkillWithGenre(order int, label string) Cthulhu6Skill {
-	return Cthulhu6Skill{Order: order, Multi: &Cthulhu6MultiSkill{Genres: []Cthulhu6SkillGenre{{Label: label}}}}
+func multiSkillWithGenre(order int, label string) Skill {
+	return Skill{Order: order, Multi: &MultiSkill{Genres: []SkillGenre{{Label: label}}}}
 }
 
-// NewCthulhu6Skills creates skills with default values
-func NewCthulhu6Skills() *Cthulhu6Skills {
-	return &Cthulhu6Skills{
-		Categories: map[SkillCategory]Cthulhu6SkillCategoryData{
+// NewSkills creates skills with default values
+func NewSkills() *Skills {
+	return &Skills{
+		Categories: map[SkillCategory]SkillCategoryData{
 			SkillCategoryCombat: {
 				Order: 0,
-				Skills: map[string]Cthulhu6Skill{
+				Skills: map[string]Skill{
 					"回避":       singleSkill(0),
 					"キック":      singleSkill(1),
 					"組み付き":     singleSkill(2),
@@ -255,7 +247,7 @@ func NewCthulhu6Skills() *Cthulhu6Skills {
 			},
 			SkillCategoryInvestigation: {
 				Order: 1,
-				Skills: map[string]Cthulhu6Skill{
+				Skills: map[string]Skill{
 					"目星":    singleSkill(0),
 					"聞き耳":   singleSkill(1),
 					"図書館":   singleSkill(2),
@@ -273,7 +265,7 @@ func NewCthulhu6Skills() *Cthulhu6Skills {
 			},
 			SkillCategoryAction: {
 				Order: 2,
-				Skills: map[string]Cthulhu6Skill{
+				Skills: map[string]Skill{
 					"登攀":    singleSkill(0),
 					"跳躍":    singleSkill(1),
 					"運転":    multiSkill(2),
@@ -289,7 +281,7 @@ func NewCthulhu6Skills() *Cthulhu6Skills {
 			},
 			SkillCategorySocial: {
 				Order: 3,
-				Skills: map[string]Cthulhu6Skill{
+				Skills: map[string]Skill{
 					"言いくるめ": singleSkill(0),
 					"信用":    singleSkill(1),
 					"説得":    singleSkill(2),
@@ -298,7 +290,7 @@ func NewCthulhu6Skills() *Cthulhu6Skills {
 			},
 			SkillCategoryKnowledge: {
 				Order: 4,
-				Skills: map[string]Cthulhu6Skill{
+				Skills: map[string]Skill{
 					"クトゥルフ神話": singleSkill(0),
 					"心理学":     singleSkill(1),
 					"母国語":     multiSkillWithGenre(2, ""),
@@ -322,13 +314,13 @@ func NewCthulhu6Skills() *Cthulhu6Skills {
 				},
 			},
 		},
-		Custom: []Cthulhu6Skill{},
-		Extra:  Cthulhu6SkillExtra{Job: 0, Hobby: 0},
+		Custom: []Skill{},
+		Extra:  SkillExtra{Job: 0, Hobby: 0},
 	}
 }
 
-// Cthulhu6EssentialSkills lists skills that should be shown in bold
-var Cthulhu6EssentialSkills = map[string]bool{
+// EssentialSkills lists skills that should be shown in bold
+var EssentialSkills = map[string]bool{
 	"回避":   true,
 	"キック":  true,
 	"組み付き": true,
@@ -343,11 +335,11 @@ var Cthulhu6EssentialSkills = map[string]bool{
 
 // IsEssentialSkill returns true if the skill is an essential/important skill
 func IsEssentialSkill(skillKey string) bool {
-	return Cthulhu6EssentialSkills[skillKey]
+	return EssentialSkills[skillKey]
 }
 
 // SkillInitialValue returns the initial value for a skill based on character stats
-func (s *Cthulhu6Status) SkillInitialValue(skillKey string) int {
+func (s *Status) SkillInitialValue(skillKey string) int {
 	switch skillKey {
 	case "回避":
 		return s.Variables["DEX"].Sum() * 2
@@ -382,7 +374,7 @@ func (s *Cthulhu6Status) SkillInitialValue(skillKey string) int {
 }
 
 // RemainingPoints calculates remaining skill points
-func (s *Cthulhu6Status) RemainingPoints(skills *Cthulhu6Skills) (job int, hobby int) {
+func (s *Status) RemainingPoints(skills *Skills) (job int, hobby int) {
 	computed := s.ComputedValues()
 	totalJob := computed["職業P"] + skills.Extra.Job
 	totalHobby := computed["興味P"] + skills.Extra.Hobby

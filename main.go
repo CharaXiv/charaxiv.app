@@ -21,6 +21,7 @@ import (
 
 	"charaxiv/models"
 	"charaxiv/storage"
+	"charaxiv/systems/cthulhu6"
 	"charaxiv/templates/components"
 	"charaxiv/templates/pages"
 	"charaxiv/templates/shared"
@@ -46,7 +47,7 @@ func buildPageContext(store *models.Store) shared.PageContext {
 }
 
 // buildSheetState creates a SheetState from model data and page context
-func buildSheetState(pc shared.PageContext, status *models.Cthulhu6Status, skills *models.Cthulhu6Skills) shared.SheetState {
+func buildSheetState(pc shared.PageContext, status *cthulhu6.Status, skills *cthulhu6.Skills) shared.SheetState {
 	vars, computed, params, db, skillCategories, skillExtra, skillPoints := statusToTemplates(status, skills)
 	return shared.SheetState{
 		PC: pc,
@@ -65,7 +66,7 @@ func buildSheetState(pc shared.PageContext, status *models.Cthulhu6Status, skill
 }
 
 // statusToTemplates converts model status to template types
-func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Skills) ([]shared.StatusVariable, []shared.ComputedValue, []shared.StatusParameter, string, []shared.SkillCategory, shared.SkillExtra, shared.SkillPoints) {
+func statusToTemplates(status *cthulhu6.Status, skills *cthulhu6.Skills) ([]shared.StatusVariable, []shared.ComputedValue, []shared.StatusParameter, string, []shared.SkillCategory, shared.SkillExtra, shared.SkillPoints) {
 	// Variables in display order
 	varOrder := []string{"STR", "CON", "POW", "DEX", "APP", "SIZ", "INT", "EDU"}
 	variables := make([]shared.StatusVariable, 0, len(varOrder))
@@ -109,13 +110,7 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 	}
 
 	// Skills - build from categories
-	categoryOrder := []models.SkillCategory{
-		models.SkillCategoryCombat,
-		models.SkillCategoryInvestigation,
-		models.SkillCategoryAction,
-		models.SkillCategorySocial,
-		models.SkillCategoryKnowledge,
-	}
+	categoryOrder := cthulhu6.CategoryOrder
 
 	skillCategories := make([]shared.SkillCategory, 0, len(categoryOrder))
 	for _, cat := range categoryOrder {
@@ -128,7 +123,7 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 				Category:  string(cat),
 				Init:      init,
 				Order:     s.Order,
-				Essential: models.IsEssentialSkill(key),
+				Essential: cthulhu6.IsEssentialSkill(key),
 			}
 			if s.IsMulti() {
 				genres := make([]shared.SkillGenre, len(s.Multi.Genres))
@@ -478,7 +473,7 @@ func main() {
 			Key:       key,
 			Init:      status.SkillInitialValue(key),
 			Order:     updatedSkill.Order,
-			Essential: models.IsEssentialSkill(key),
+			Essential: cthulhu6.IsEssentialSkill(key),
 			Single: &shared.SingleSkillData{
 				Job:   updatedSkill.Single.Job,
 				Hobby: updatedSkill.Single.Hobby,
@@ -502,7 +497,7 @@ func main() {
 		}
 
 		// Add a new empty genre
-		skill.Multi.Genres = append(skill.Multi.Genres, models.Cthulhu6SkillGenre{})
+		skill.Multi.Genres = append(skill.Multi.Genres, cthulhu6.SkillGenre{})
 		charStore.UpdateSkill(key, skill)
 
 		pc := shared.NewPageContext()
