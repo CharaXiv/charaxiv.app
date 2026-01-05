@@ -6,12 +6,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // Store handles write coalescing with SQLite buffer and JSON file persistence.
@@ -35,7 +37,7 @@ func New(cfg Config) (*Store, error) {
 	}
 
 	// Open SQLite
-	db, err := sql.Open("sqlite3", cfg.DBPath+"?_journal_mode=WAL")
+	db, err := sql.Open("sqlite", cfg.DBPath+"?_journal_mode=WAL")
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
@@ -68,6 +70,7 @@ func (s *Store) Close() error {
 
 // Write buffers a write operation
 func (s *Store) Write(characterID, path string, value any) error {
+	start := time.Now()
 	valueJSON, err := json.Marshal(value)
 	if err != nil {
 		return fmt.Errorf("marshal value: %w", err)
@@ -81,15 +84,18 @@ func (s *Store) Write(characterID, path string, value any) error {
 		return fmt.Errorf("insert buffer: %w", err)
 	}
 
+	slog.Debug("coalesce.write", "characterID", characterID, "path", path, "duration", time.Since(start))
 	return nil
 }
 
 // Read returns the current state for a character, flushing any pending writes
 func (s *Store) Read(characterID string) (map[string]any, error) {
+	start := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Load from disk
+	loadStart := time.Now()
 	data, err := s.loadFromDisk(characterID)
 	if err != nil {
 		return nil, err
@@ -97,6 +103,7 @@ func (s *Store) Read(characterID string) (map[string]any, error) {
 	if data == nil {
 		data = make(map[string]any)
 	}
+	loadDuration := time.Since(loadStart)
 
 	// Get pending writes
 	pending, err := s.getPendingWrites(characterID)
@@ -105,7 +112,9 @@ func (s *Store) Read(characterID string) (map[string]any, error) {
 	}
 
 	// Apply and flush if there are pending writes
+	var flushDuration time.Duration
 	if len(pending) > 0 {
+		flushStart := time.Now()
 		for _, p := range pending {
 			setPath(data, p.path, p.value)
 		}
@@ -117,8 +126,16 @@ func (s *Store) Read(characterID string) (map[string]any, error) {
 		if err := s.clearBuffer(characterID); err != nil {
 			return nil, err
 		}
+		flushDuration = time.Since(flushStart)
 	}
 
+	slog.Debug("coalesce.read",
+		"characterID", characterID,
+		"pendingWrites", len(pending),
+		"loadDuration", loadDuration,
+		"flushDuration", flushDuration,
+		"duration", time.Since(start),
+	)
 	return data, nil
 }
 
