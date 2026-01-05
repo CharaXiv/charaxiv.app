@@ -137,6 +137,52 @@ templ SkillsPanelContent(state SheetState) {
 				overflow: hidden;
 			}
 
+			/* Skills columns for 2xl two-row layout */
+			.skills-columns {
+				display: grid;
+				grid-template-columns: 1fr;
+				gap: var(--space-4);
+			}
+
+			@media (min-width: 1536px) {
+				.skills-columns {
+					grid-template-columns: 1fr 1fr;
+				}
+			}
+
+			.skills-column {
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-4);
+			}
+
+			/* First column: show on all screens, hide categories 5+ on 2xl */
+			.skills-column--first {
+			}
+
+			@media (min-width: 1536px) {
+				/* nth-child(n+5) hides child 5, 6, 7... (categories 4+ since Extra is child 1) */
+				.skills-column--first > :nth-child(n+5) {
+					display: none;
+				}
+			}
+
+			/* Second column: hidden by default, show on 2xl with only categories 5+ */
+			.skills-column--second {
+				display: none;
+			}
+
+			@media (min-width: 1536px) {
+				.skills-column--second {
+					display: flex;
+				}
+
+				/* nth-child(-n+4) means child 1, 2, 3, 4 (first 4 categories, no Extra in this column) */
+				.skills-column--second > :nth-child(-n+4) {
+					display: none;
+				}
+			}
+
 			/* Skills category */
 			.skills-category {
 				display: flex;
@@ -302,17 +348,20 @@ templ SkillsPanelContent(state SheetState) {
 		<div class="skills-header">
 			<h2 class="skills-title">技能</h2>
 		</div>
-		@ExtraPointsForm(state.PC, state.Skills.Extra)
-		for _, category := range state.Skills.Categories {
-			<div class="skills-category">
-				<h3 class="skills-category-title">{ category.Name }</h3>
-				<div class="skills-list">
-					for _, skill := range category.Skills {
-						@SkillRow(state.PC, skill, state.Skills.Remaining)
-					}
-				</div>
+		<div class="skills-columns">
+			<div class="skills-column skills-column--first">
+				@ExtraPointsForm(state.PC, state.Skills.Extra)
+				for _, category := range state.Skills.Categories {
+					@SkillCategoryBlock(state.PC, category, state.Skills.Remaining)
+				}
 			</div>
-		}
+			<div class="skills-column skills-column--second">
+				@ExtraPointsForm(state.PC, state.Skills.Extra)
+				for _, category := range state.Skills.Categories {
+					@SkillCategoryBlock(state.PC, category, state.Skills.Remaining)
+				}
+			</div>
+		</div>
 	</div>
 }
 
@@ -370,6 +419,18 @@ templ ExtraPointsForm(pc PageContext, extra SkillExtra) {
 }
 
 // SkillRow renders a single skill with expandable details
+// SkillCategoryBlock renders a skill category with its skills
+templ SkillCategoryBlock(pc PageContext, category SkillCategory, remaining SkillPoints) {
+	<div class="skills-category">
+		<h3 class="skills-category-title">{ category.Name }</h3>
+		<div class="skills-list">
+			for _, skill := range category.Skills {
+				@SkillRow(pc, skill, remaining)
+			}
+		</div>
+	</div>
+}
+
 templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
 	{{ expanded := skill.Allocated() > 0 || skill.Grow }}
 	<details class="skill-row" id={ "skill-row-" + skill.Key } open?={ expanded }>
