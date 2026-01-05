@@ -120,7 +120,7 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 	skillCategories := make([]shared.SkillCategory, 0, len(categoryOrder))
 	for _, cat := range categoryOrder {
 		catData := skills.Categories[cat]
-		skillsInCat := make([]shared.Skill, 0, len(catData.Skills))
+		var singleSkills, multiSkills []shared.Skill
 		for key, s := range catData.Skills {
 			init := status.SkillInitialValue(key)
 			skill := shared.Skill{
@@ -142,6 +142,7 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 					}
 				}
 				skill.Multi = &shared.MultiSkillData{Genres: genres}
+				multiSkills = append(multiSkills, skill)
 			} else if s.IsSingle() {
 				skill.Single = &shared.SingleSkillData{
 					Job:   s.Single.Job,
@@ -150,15 +151,19 @@ func statusToTemplates(status *models.Cthulhu6Status, skills *models.Cthulhu6Ski
 					Temp:  s.Single.Temp,
 					Grow:  s.Single.Grow,
 				}
+				singleSkills = append(singleSkills, skill)
 			}
-			skillsInCat = append(skillsInCat, skill)
 		}
-		sort.Slice(skillsInCat, func(i, j int) bool {
-			return skillsInCat[i].Order < skillsInCat[j].Order
+		sort.Slice(singleSkills, func(i, j int) bool {
+			return singleSkills[i].Order < singleSkills[j].Order
+		})
+		sort.Slice(multiSkills, func(i, j int) bool {
+			return multiSkills[i].Order < multiSkills[j].Order
 		})
 		skillCategories = append(skillCategories, shared.SkillCategory{
-			Name:   string(cat),
-			Skills: skillsInCat,
+			Name:         string(cat),
+			SingleSkills: singleSkills,
+			MultiSkills:  multiSkills,
 		})
 	}
 

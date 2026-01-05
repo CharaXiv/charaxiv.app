@@ -131,8 +131,9 @@ type StatusState struct {
 
 // SkillCategory represents a group of skills
 type SkillCategory struct {
-	Name   string  // category name (e.g., "戦闘技能")
-	Skills []Skill // skills in this category, sorted by order
+	Name         string  // category name (e.g., "戦闘技能")
+	SingleSkills []Skill // single skills in this category, sorted by order
+	MultiSkills  []Skill // multi-genre skills in this category, sorted by order
 }
 
 // SkillsState holds all skills-related data for rendering

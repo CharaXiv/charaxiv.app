@@ -617,18 +617,16 @@ templ ExtraPointsForm(pc PageContext, extra SkillExtra) {
 	</div>
 }
 
-// SkillRow renders a single skill with expandable details
 // SkillCategoryBlock renders a skill category with its skills
 templ SkillCategoryBlock(pc PageContext, category SkillCategory, remaining SkillPoints) {
 	<div class="skills-category">
 		<h3 class="skills-category-title">{ category.Name }</h3>
 		<div class="skills-list">
-			for _, skill := range category.Skills {
-				if skill.IsMulti() {
-					@SkillMulti(pc, skill, remaining)
-				} else {
-					@SkillRow(pc, skill, remaining)
-				}
+			for _, skill := range category.SingleSkills {
+				@SkillRow(pc, skill, remaining)
+			}
+			for _, skill := range category.MultiSkills {
+				@SkillMulti(pc, skill, remaining)
 			}
 		</div>
 	</div>
