@@ -622,11 +622,12 @@ templ SkillCategoryBlock(pc PageContext, category SkillCategory, remaining Skill
 	<div class="skills-category">
 		<h3 class="skills-category-title">{ category.Name }</h3>
 		<div class="skills-list">
-			for _, skill := range category.SingleSkills {
-				@SkillRow(pc, skill, remaining)
-			}
-			for _, skill := range category.MultiSkills {
-				@SkillMulti(pc, skill, remaining)
+			for _, skill := range category.AllSkills() {
+				if skill.IsMulti() {
+					@SkillMulti(pc, skill, remaining)
+				} else {
+					@SkillRow(pc, skill, remaining)
+				}
 			}
 		</div>
 	</div>

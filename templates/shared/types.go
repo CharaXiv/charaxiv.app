@@ -136,6 +136,24 @@ type SkillCategory struct {
 	MultiSkills  []Skill // multi-genre skills in this category, sorted by order
 }
 
+// AllSkills returns all skills merged and sorted by Order
+func (c SkillCategory) AllSkills() []Skill {
+	all := make([]Skill, 0, len(c.SingleSkills)+len(c.MultiSkills))
+	i, j := 0, 0
+	for i < len(c.SingleSkills) && j < len(c.MultiSkills) {
+		if c.SingleSkills[i].Order <= c.MultiSkills[j].Order {
+			all = append(all, c.SingleSkills[i])
+			i++
+		} else {
+			all = append(all, c.MultiSkills[j])
+			j++
+		}
+	}
+	all = append(all, c.SingleSkills[i:]...)
+	all = append(all, c.MultiSkills[j:]...)
+	return all
+}
+
 // SkillsState holds all skills-related data for rendering
 type SkillsState struct {
 	Categories []SkillCategory // categories in display order
