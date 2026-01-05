@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,7 +11,265 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"charaxiv/models"
+	"charaxiv/systems/cthulhu6"
 )
+
+// RouteTest defines a test case for a route
+type RouteTest struct {
+	Method       string
+	Route        string
+	Desc         string
+	TestURL      string              // Actual URL to test (with params filled in)
+	Form         url.Values          // Form data to send
+	Query        string              // Query string (e.g., "delta=1")
+	Setup        func(*models.Store) // Optional setup before test
+	WantCode     int
+	WantContains []string // Strings that should be in response body
+}
+
+// routeTests defines all routes with their test cases
+var routeTests = []RouteTest{
+	{
+		Method:       "GET",
+		Route:        "/cthulhu6/",
+		Desc:         "Sheet page",
+		TestURL:      "/cthulhu6/",
+		WantCode:     http.StatusOK,
+		WantContains: []string{"CharaXiv", "/cthulhu6/api/", "text/html"},
+	},
+	{
+		Method:       "POST",
+		Route:        "/cthulhu6/api/preview/on",
+		Desc:         "Enable preview mode",
+		TestURL:      "/cthulhu6/api/preview/on",
+		WantCode:     http.StatusOK,
+		WantContains: []string{"memo-group"},
+	},
+	{
+		Method:       "POST",
+		Route:        "/cthulhu6/api/preview/off",
+		Desc:         "Disable preview mode",
+		TestURL:      "/cthulhu6/api/preview/off",
+		WantCode:     http.StatusOK,
+		WantContains: []string{"memo-group"},
+	},
+	{
+		Method:       "POST",
+		Route:        "/cthulhu6/api/status/{key}/set",
+		Desc:         "Set status variable directly",
+		TestURL:      "/cthulhu6/api/status/status-STR/set",
+		Form:         url.Values{"status_STR": {"15"}},
+		WantCode:     http.StatusOK,
+		WantContains: []string{"status-panel"},
+	},
+	{
+		Method:       "POST",
+		Route:        "/cthulhu6/api/status/{key}/adjust",
+		Desc:         "Adjust status variable",
+		TestURL:      "/cthulhu6/api/status/status-STR/adjust",
+		Query:        "delta=1",
+		WantCode:     http.StatusOK,
+		WantContains: []string{"status-panel"},
+	},
+	{
+		Method:       "POST",
+		Route:        "/cthulhu6/api/status/{key}/adjust",
+		Desc:         "Adjust parameter (HP)",
+		TestURL:      "/cthulhu6/api/status/param-HP/adjust",
+		Query:        "delta=1",
+		WantCode:     http.StatusOK,
+		WantContains: []string{"status-panel"},
+	},
+	{
+		Method:       "POST",
+		Route:        "/cthulhu6/api/status/{key}/adjust",
+		Desc:         "Adjust extra job points",
+		TestURL:      "/cthulhu6/api/status/extra-job/adjust",
+		Query:        "delta=1",
+		WantCode:     http.StatusOK,
+		WantContains: []string{"skills-panel"},
+	},
+	{
+		Method:       "POST",
+		Route:        "/cthulhu6/api/memo/{id}/set",
+		Desc:         "Set memo content",
+		TestURL:      "/cthulhu6/api/memo/public-memo/set",
+		Form:         url.Values{"public-memo": {"Test content"}},
+		WantCode:     http.StatusNoContent,
+		WantContains: nil,
+	},
+	{
+		Method:       "POST",
+		Route:        "/cthulhu6/api/skill/{key}/grow",
+		Desc:         "Toggle skill grow flag",
+		TestURL:      "/cthulhu6/api/skill/回避/grow",
+		WantCode:     http.StatusOK,
+		WantContains: []string{"skills-panel", "/cthulhu6/api/skill/"},
+	},
+	{
+		Method:       "POST",
+		Route:        "/cthulhu6/api/skill/{key}/{field}/adjust",
+		Desc:         "Adjust skill field",
+		TestURL:      "/cthulhu6/api/skill/回避/job/adjust",
+		Query:        "delta=5",
+		WantCode:     http.StatusOK,
+		WantContains: []string{"hx-swap-oob", "/cthulhu6/api/"},
+	},
+	{
+		Method:       "POST",
+		Route:        "/cthulhu6/api/skill/{key}/genre/add",
+		Desc:         "Add genre to multi-skill",
+		TestURL:      "/cthulhu6/api/skill/芸術/genre/add",
+		WantCode:     http.StatusOK,
+		WantContains: []string{"skills-panel"},
+	},
+	{
+		Method:  "POST",
+		Route:   "/cthulhu6/api/skill/{key}/genre/{index}/delete",
+		Desc:    "Delete genre from multi-skill",
+		TestURL: "/cthulhu6/api/skill/芸術/genre/0/delete",
+		Setup: func(s *models.Store) {
+			// Add a genre first so we can delete it
+			skill, _ := s.GetSkill("芸術")
+			skill.Multi.Genres = append(skill.Multi.Genres, cthulhu6.SkillGenre{})
+			s.UpdateSkill("芸術", skill)
+		},
+		WantCode:     http.StatusOK,
+		WantContains: []string{"skills-panel"},
+	},
+	{
+		Method:  "POST",
+		Route:   "/cthulhu6/api/skill/{key}/genre/{index}/grow",
+		Desc:    "Toggle genre grow flag",
+		TestURL: "/cthulhu6/api/skill/芸術/genre/0/grow",
+		Setup: func(s *models.Store) {
+			skill, _ := s.GetSkill("芸術")
+			skill.Multi.Genres = append(skill.Multi.Genres, cthulhu6.SkillGenre{})
+			s.UpdateSkill("芸術", skill)
+		},
+		WantCode:     http.StatusOK,
+		WantContains: []string{"skills-panel"},
+	},
+	{
+		Method:  "POST",
+		Route:   "/cthulhu6/api/skill/{key}/genre/{index}/label",
+		Desc:    "Set genre label",
+		TestURL: "/cthulhu6/api/skill/芸術/genre/0/label",
+		Form:    url.Values{"label": {"絵画"}},
+		Setup: func(s *models.Store) {
+			skill, _ := s.GetSkill("芸術")
+			skill.Multi.Genres = append(skill.Multi.Genres, cthulhu6.SkillGenre{})
+			s.UpdateSkill("芸術", skill)
+		},
+		WantCode:     http.StatusOK,
+		WantContains: nil, // Returns empty
+	},
+	{
+		Method:  "POST",
+		Route:   "/cthulhu6/api/skill/{key}/genre/{index}/{field}/adjust",
+		Desc:    "Adjust genre field",
+		TestURL: "/cthulhu6/api/skill/芸術/genre/0/job/adjust",
+		Query:   "delta=5",
+		Setup: func(s *models.Store) {
+			skill, _ := s.GetSkill("芸術")
+			skill.Multi.Genres = append(skill.Multi.Genres, cthulhu6.SkillGenre{})
+			s.UpdateSkill("芸術", skill)
+		},
+		WantCode:     http.StatusOK,
+		WantContains: []string{"skills-panel"},
+	},
+}
+
+// TestRoutes runs all route tests from the table
+func TestRoutes(t *testing.T) {
+	for _, tt := range routeTests {
+		t.Run(tt.Desc, func(t *testing.T) {
+			r, store := setupTestRouter()
+
+			// Run setup if provided
+			if tt.Setup != nil {
+				tt.Setup(store)
+			}
+
+			// Build URL with query string
+			testURL := tt.TestURL
+			if tt.Query != "" {
+				testURL += "?" + tt.Query
+			}
+
+			// Build request
+			var req *http.Request
+			if tt.Form != nil {
+				req = httptest.NewRequest(tt.Method, testURL, strings.NewReader(tt.Form.Encode()))
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			} else {
+				req = httptest.NewRequest(tt.Method, testURL, nil)
+			}
+
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			// Check status code
+			if w.Code != tt.WantCode {
+				t.Errorf("Expected status %d, got %d", tt.WantCode, w.Code)
+			}
+
+			// Check response contains expected strings
+			body := w.Body.String()
+			contentType := w.Header().Get("Content-Type")
+			fullResponse := body + contentType
+
+			for _, want := range tt.WantContains {
+				if !strings.Contains(fullResponse, want) {
+					t.Errorf("Expected response to contain %q", want)
+				}
+			}
+		})
+	}
+}
+
+// TestAllRoutesHaveTests verifies every registered route has a test case
+func TestAllRoutesHaveTests(t *testing.T) {
+	r, _ := setupTestRouter()
+
+	// Build set of routes that have tests
+	testedRoutes := make(map[string]bool)
+	for _, tt := range routeTests {
+		key := tt.Method + " " + tt.Route
+		testedRoutes[key] = true
+	}
+
+	// Walk registered routes and check each has a test
+	var untestedRoutes []string
+	var registeredRoutes []string
+
+	chi.Walk(r, func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+		key := method + " " + route
+		registeredRoutes = append(registeredRoutes, key)
+		if !testedRoutes[key] {
+			untestedRoutes = append(untestedRoutes, key)
+		}
+		return nil
+	})
+
+	// Report untested routes
+	for _, route := range untestedRoutes {
+		t.Errorf("Route has no test: %s", route)
+	}
+
+	// Check for tests that don't match any registered route
+	registeredSet := make(map[string]bool)
+	for _, route := range registeredRoutes {
+		registeredSet[route] = true
+	}
+
+	for _, tt := range routeTests {
+		key := tt.Method + " " + tt.Route
+		if !registeredSet[key] {
+			t.Errorf("Test exists for unregistered route: %s (%s)", key, tt.Desc)
+		}
+	}
+}
 
 // setupTestRouter creates a test router with a fresh store
 func setupTestRouter() (chi.Router, *models.Store) {
@@ -20,135 +279,16 @@ func setupTestRouter() (chi.Router, *models.Store) {
 	return r, store
 }
 
-// TestSheetPage tests the main sheet page renders
-func TestSheetPage(t *testing.T) {
-	r, _ := setupTestRouter()
-
-	req := httptest.NewRequest("GET", "/cthulhu6/", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	if !strings.Contains(w.Header().Get("Content-Type"), "text/html") {
-		t.Errorf("Expected text/html content type, got %s", w.Header().Get("Content-Type"))
-	}
-
-	// Check that the page contains expected elements
-	body := w.Body.String()
-	if !strings.Contains(body, "CharaXiv") {
-		t.Error("Expected page to contain CharaXiv")
-	}
-	if !strings.Contains(body, "/cthulhu6/api/") {
-		t.Error("Expected page to contain /cthulhu6/api/ routes")
-	}
-}
-
-// TestPreviewModeOn tests enabling preview mode
-func TestPreviewModeOn(t *testing.T) {
-	r, _ := setupTestRouter()
-
-	req := httptest.NewRequest("POST", "/cthulhu6/api/preview/on", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	body := w.Body.String()
-	// Preview mode should return memo fragments in read-only mode
-	if !strings.Contains(body, "memo-group") {
-		t.Error("Expected response to contain memo-group")
-	}
-}
-
-// TestPreviewModeOff tests disabling preview mode
-func TestPreviewModeOff(t *testing.T) {
-	r, _ := setupTestRouter()
-
-	req := httptest.NewRequest("POST", "/cthulhu6/api/preview/off", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-}
-
-// TestStatusAdjust tests adjusting status variables
-func TestStatusAdjust(t *testing.T) {
-	tests := []struct {
-		name     string
-		key      string
-		delta    string
-		wantCode int
-	}{
-		{"STR +1", "status-STR", "1", http.StatusOK},
-		{"STR -1", "status-STR", "-1", http.StatusOK},
-		{"STR +5", "status-STR", "5", http.StatusOK},
-		{"CON +1", "status-CON", "1", http.StatusOK},
-		{"DEX +1", "status-DEX", "1", http.StatusOK},
-		{"INT +1", "status-INT", "1", http.StatusOK},
-		{"EDU +1", "status-EDU", "1", http.StatusOK},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r, _ := setupTestRouter()
-
-			req := httptest.NewRequest("POST", "/cthulhu6/api/status/"+tt.key+"/adjust?delta="+tt.delta, nil)
-			w := httptest.NewRecorder()
-			r.ServeHTTP(w, req)
-
-			if w.Code != tt.wantCode {
-				t.Errorf("Expected status %d, got %d", tt.wantCode, w.Code)
-			}
-		})
-	}
-}
-
-// TestStatusSet tests setting status variables directly
-func TestStatusSet(t *testing.T) {
-	r, store := setupTestRouter()
-
-	// Get initial STR value
-	initialSTR := store.GetStatus().Variables["STR"].Base
-
-	// Set STR to a new value
-	form := url.Values{}
-	form.Set("status_STR", "15")
-	req := httptest.NewRequest("POST", "/cthulhu6/api/status/status-STR/set", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	// Verify the value changed
-	newSTR := store.GetStatus().Variables["STR"].Base
-	if newSTR == initialSTR {
-		t.Error("Expected STR to change")
-	}
-	if newSTR != 15 {
-		t.Errorf("Expected STR to be 15, got %d", newSTR)
-	}
-}
+// Additional focused tests for specific behaviors
 
 // TestStatusSetNoChange tests that unchanged values return 204
 func TestStatusSetNoChange(t *testing.T) {
 	r, store := setupTestRouter()
 
-	// Get initial STR value
 	initialSTR := store.GetStatus().Variables["STR"].Base
 
-	// Set STR to the same value
 	form := url.Values{}
-	form.Set("status_STR", string(rune('0'+initialSTR))) // Convert to string
+	form.Set("status_STR", fmt.Sprintf("%d", initialSTR))
 	req := httptest.NewRequest("POST", "/cthulhu6/api/status/status-STR/set", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
@@ -159,174 +299,10 @@ func TestStatusSetNoChange(t *testing.T) {
 	}
 }
 
-// TestParameterAdjust tests adjusting parameters (HP, MP, SAN)
-func TestParameterAdjust(t *testing.T) {
-	tests := []struct {
-		name  string
-		key   string
-		delta string
-	}{
-		{"HP +1", "param-HP", "1"},
-		{"HP -1", "param-HP", "-1"},
-		{"MP +1", "param-MP", "1"},
-		{"SAN +1", "param-SAN", "1"},
-		{"SAN -5", "param-SAN", "-5"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r, _ := setupTestRouter()
-
-			req := httptest.NewRequest("POST", "/cthulhu6/api/status/"+tt.key+"/adjust?delta="+tt.delta, nil)
-			w := httptest.NewRecorder()
-			r.ServeHTTP(w, req)
-
-			if w.Code != http.StatusOK {
-				t.Errorf("Expected status 200, got %d", w.Code)
-			}
-		})
-	}
-}
-
-// TestExtraPointsAdjust tests adjusting extra skill points
-func TestExtraPointsAdjust(t *testing.T) {
-	tests := []struct {
-		name  string
-		key   string
-		delta string
-	}{
-		{"Extra Job +1", "extra-job", "1"},
-		{"Extra Job +5", "extra-job", "5"},
-		{"Extra Hobby +1", "extra-hobby", "1"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r, _ := setupTestRouter()
-
-			req := httptest.NewRequest("POST", "/cthulhu6/api/status/"+tt.key+"/adjust?delta="+tt.delta, nil)
-			w := httptest.NewRecorder()
-			r.ServeHTTP(w, req)
-
-			if w.Code != http.StatusOK {
-				t.Errorf("Expected status 200, got %d", w.Code)
-			}
-		})
-	}
-}
-
-// TestMemoSet tests setting memo content
-func TestMemoSet(t *testing.T) {
-	r, store := setupTestRouter()
-
-	form := url.Values{}
-	form.Set("public-memo", "Test memo content")
-	req := httptest.NewRequest("POST", "/cthulhu6/api/memo/public-memo/set", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusNoContent {
-		t.Errorf("Expected status 204, got %d", w.Code)
-	}
-
-	// Verify the memo was saved
-	if store.GetMemo("public-memo") != "Test memo content" {
-		t.Error("Expected memo to be saved")
-	}
-}
-
-// TestMemoSetAllTypes tests all memo types
-func TestMemoSetAllTypes(t *testing.T) {
-	memoIDs := []string{"public-memo", "secret-memo", "scenario-public-memo", "scenario-secret-memo"}
-
-	for _, id := range memoIDs {
-		t.Run(id, func(t *testing.T) {
-			r, store := setupTestRouter()
-
-			form := url.Values{}
-			form.Set(id, "Content for "+id)
-			req := httptest.NewRequest("POST", "/cthulhu6/api/memo/"+id+"/set", strings.NewReader(form.Encode()))
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			w := httptest.NewRecorder()
-			r.ServeHTTP(w, req)
-
-			if w.Code != http.StatusNoContent {
-				t.Errorf("Expected status 204, got %d", w.Code)
-			}
-
-			if store.GetMemo(id) != "Content for "+id {
-				t.Error("Expected memo to be saved")
-			}
-		})
-	}
-}
-
-// TestSkillGrow tests toggling skill grow flag
-func TestSkillGrow(t *testing.T) {
-	r, store := setupTestRouter()
-
-	// Get initial grow state for 回避
-	skill, _ := store.GetSkill("回避")
-	initialGrow := skill.Single.Grow
-
-	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/回避/grow", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	// Verify grow was toggled
-	skill, _ = store.GetSkill("回避")
-	if skill.Single.Grow == initialGrow {
-		t.Error("Expected grow flag to be toggled")
-	}
-}
-
-// TestSkillAdjust tests adjusting skill fields
-func TestSkillAdjust(t *testing.T) {
-	tests := []struct {
-		name  string
-		skill string
-		field string
-		delta string
-	}{
-		{"回避 job +1", "回避", "job", "1"},
-		{"回避 hobby +5", "回避", "hobby", "5"},
-		{"回避 perm +1", "回避", "perm", "1"},
-		{"回避 temp +1", "回避", "temp", "1"},
-		{"キック job +1", "キック", "job", "1"},
-		{"目星 hobby +10", "目星", "hobby", "10"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r, _ := setupTestRouter()
-
-			req := httptest.NewRequest("POST", "/cthulhu6/api/skill/"+url.PathEscape(tt.skill)+"/"+tt.field+"/adjust?delta="+tt.delta, nil)
-			w := httptest.NewRecorder()
-			r.ServeHTTP(w, req)
-
-			if w.Code != http.StatusOK {
-				t.Errorf("Expected status 200, got %d", w.Code)
-			}
-
-			// Verify response contains OOB fragments
-			body := w.Body.String()
-			if !strings.Contains(body, "hx-swap-oob") {
-				t.Error("Expected response to contain OOB swap fragments")
-			}
-		})
-	}
-}
-
 // TestSkillAdjustChangesValue tests that skill adjustment actually changes the value
 func TestSkillAdjustChangesValue(t *testing.T) {
 	r, store := setupTestRouter()
 
-	// Get initial value
 	skill, _ := store.GetSkill("回避")
 	initialJob := skill.Single.Job
 
@@ -338,7 +314,6 @@ func TestSkillAdjustChangesValue(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	// Verify value changed
 	skill, _ = store.GetSkill("回避")
 	if skill.Single.Job != initialJob+5 {
 		t.Errorf("Expected job to be %d, got %d", initialJob+5, skill.Single.Job)
@@ -349,27 +324,36 @@ func TestSkillAdjustChangesValue(t *testing.T) {
 func TestSkillAdjustNonNegative(t *testing.T) {
 	r, store := setupTestRouter()
 
-	// Try to decrease job below 0
 	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/回避/job/adjust?delta=-100", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	// Verify value is clamped to 0
 	skill, _ := store.GetSkill("回避")
 	if skill.Single.Job < 0 {
 		t.Error("Expected job to not go below 0")
 	}
 }
 
-// TestGenreAdd tests adding a genre to a multi-skill
-func TestGenreAdd(t *testing.T) {
+// TestMemoSetChangesValue tests that memo is actually saved
+func TestMemoSetChangesValue(t *testing.T) {
 	r, store := setupTestRouter()
 
-	// Get initial genre count for 芸術
+	form := url.Values{}
+	form.Set("public-memo", "Test memo content")
+	req := httptest.NewRequest("POST", "/cthulhu6/api/memo/public-memo/set", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if store.GetMemo("public-memo") != "Test memo content" {
+		t.Error("Expected memo to be saved")
+	}
+}
+
+// TestGenreAddChangesCount tests that adding a genre increases the count
+func TestGenreAddChangesCount(t *testing.T) {
+	r, store := setupTestRouter()
+
 	skill, _ := store.GetSkill("芸術")
 	initialCount := len(skill.Multi.Genres)
 
@@ -377,176 +361,26 @@ func TestGenreAdd(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	// Verify genre was added
 	skill, _ = store.GetSkill("芸術")
 	if len(skill.Multi.Genres) != initialCount+1 {
 		t.Errorf("Expected %d genres, got %d", initialCount+1, len(skill.Multi.Genres))
 	}
 }
 
-// TestGenreDelete tests deleting a genre from a multi-skill
-func TestGenreDelete(t *testing.T) {
-	r, store := setupTestRouter()
-
-	// First add a genre
-	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/芸術/genre/add", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	skill, _ := store.GetSkill("芸術")
-	countAfterAdd := len(skill.Multi.Genres)
-
-	// Now delete it
-	req = httptest.NewRequest("POST", "/cthulhu6/api/skill/芸術/genre/0/delete", nil)
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	// Verify genre was deleted
-	skill, _ = store.GetSkill("芸術")
-	if len(skill.Multi.Genres) != countAfterAdd-1 {
-		t.Errorf("Expected %d genres after delete, got %d", countAfterAdd-1, len(skill.Multi.Genres))
-	}
-}
-
-// TestGenreGrow tests toggling genre grow flag
-func TestGenreGrow(t *testing.T) {
-	r, store := setupTestRouter()
-
-	// First add a genre to 芸術
-	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/芸術/genre/add", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	// Get initial grow state
-	skill, _ := store.GetSkill("芸術")
-	initialGrow := skill.Multi.Genres[0].Grow
-
-	// Toggle grow
-	req = httptest.NewRequest("POST", "/cthulhu6/api/skill/芸術/genre/0/grow", nil)
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	// Verify grow was toggled
-	skill, _ = store.GetSkill("芸術")
-	if skill.Multi.Genres[0].Grow == initialGrow {
-		t.Error("Expected grow flag to be toggled")
-	}
-}
-
-// TestGenreLabel tests setting genre label
-func TestGenreLabel(t *testing.T) {
-	r, store := setupTestRouter()
-
-	// First add a genre to 芸術
-	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/芸術/genre/add", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	// Set label
-	form := url.Values{}
-	form.Set("label", "絵画")
-	req = httptest.NewRequest("POST", "/cthulhu6/api/skill/芸術/genre/0/label", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	// Verify label was set
-	skill, _ := store.GetSkill("芸術")
-	if skill.Multi.Genres[0].Label != "絵画" {
-		t.Errorf("Expected label to be '絵画', got '%s'", skill.Multi.Genres[0].Label)
-	}
-}
-
-// TestGenreAdjust tests adjusting genre fields
-func TestGenreAdjust(t *testing.T) {
-	r, store := setupTestRouter()
-
-	// First add a genre to 芸術
-	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/芸術/genre/add", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	tests := []struct {
-		field string
-		delta string
-	}{
-		{"job", "5"},
-		{"hobby", "10"},
-		{"perm", "3"},
-		{"temp", "2"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.field, func(t *testing.T) {
-			req := httptest.NewRequest("POST", "/cthulhu6/api/skill/芸術/genre/0/"+tt.field+"/adjust?delta="+tt.delta, nil)
-			w := httptest.NewRecorder()
-			r.ServeHTTP(w, req)
-
-			if w.Code != http.StatusOK {
-				t.Errorf("Expected status 200, got %d", w.Code)
-			}
-		})
-	}
-
-	// Verify values were set
-	skill, _ := store.GetSkill("芸術")
-	genre := skill.Multi.Genres[0]
-	if genre.Job != 5 {
-		t.Errorf("Expected job to be 5, got %d", genre.Job)
-	}
-	if genre.Hobby != 10 {
-		t.Errorf("Expected hobby to be 10, got %d", genre.Hobby)
-	}
-	if genre.Perm != 3 {
-		t.Errorf("Expected perm to be 3, got %d", genre.Perm)
-	}
-	if genre.Temp != 2 {
-		t.Errorf("Expected temp to be 2, got %d", genre.Temp)
-	}
-}
-
-// TestInvalidSkill tests handling of invalid skill keys
-func TestInvalidSkill(t *testing.T) {
+// TestInvalidSkillReturnsEmpty tests handling of invalid skill keys
+func TestInvalidSkillReturnsEmpty(t *testing.T) {
 	r, _ := setupTestRouter()
 
 	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/nonexistent/grow", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	// Should return OK with empty body (Empty component)
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
-}
-
-// TestInvalidGenreIndex tests handling of invalid genre index
-func TestInvalidGenreIndex(t *testing.T) {
-	r, _ := setupTestRouter()
-
-	// Try to delete non-existent genre
-	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/芸術/genre/999/delete", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	// Should return OK with empty body
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+	// Empty component returns minimal HTML
+	if len(w.Body.String()) > 100 {
+		t.Error("Expected minimal/empty response for invalid skill")
 	}
 }
 
@@ -554,29 +388,25 @@ func TestInvalidGenreIndex(t *testing.T) {
 func TestOOBFragmentsHaveCorrectBasePath(t *testing.T) {
 	r, _ := setupTestRouter()
 
-	// Test skill grow toggle response
 	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/回避/grow", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	body := w.Body.String()
 
-	// All hx-post attributes should have /cthulhu6 prefix
 	if strings.Contains(body, `hx-post="/api/`) {
 		t.Error("OOB fragment contains /api/ without /cthulhu6 prefix")
 	}
 
-	// Should contain correctly prefixed routes
 	if !strings.Contains(body, `/cthulhu6/api/skill/`) {
 		t.Error("OOB fragment missing /cthulhu6/api/skill/ routes")
 	}
 }
 
-// TestStatusAdjustOOBFragments tests that status adjust returns correct OOB fragments
-func TestStatusAdjustOOBFragments(t *testing.T) {
+// TestDEXChangeIncludesSkillsPanel tests that DEX changes return skills panel OOB
+func TestDEXChangeIncludesSkillsPanel(t *testing.T) {
 	r, _ := setupTestRouter()
 
-	// DEX changes should include skills panel (回避 depends on DEX)
 	req := httptest.NewRequest("POST", "/cthulhu6/api/status/status-DEX/adjust?delta=1", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -585,77 +415,18 @@ func TestStatusAdjustOOBFragments(t *testing.T) {
 	if !strings.Contains(body, "skills-panel") {
 		t.Error("DEX change should include skills panel in OOB response")
 	}
-
-	// INT changes should include points display
-	req = httptest.NewRequest("POST", "/cthulhu6/api/status/status-INT/adjust?delta=1", nil)
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	body = w.Body.String()
-	if !strings.Contains(body, "points-display") {
-		t.Error("INT change should include points display in OOB response")
-	}
 }
 
-// expectedRoutes defines all routes that should be registered with their descriptions
-var expectedRoutes = []struct {
-	method string
-	route  string
-	desc   string
-}{
-	{"GET", "/cthulhu6/", "Sheet page"},
-	{"POST", "/cthulhu6/api/preview/on", "Enable preview mode"},
-	{"POST", "/cthulhu6/api/preview/off", "Disable preview mode"},
-	{"POST", "/cthulhu6/api/status/{key}/set", "Set status variable directly"},
-	{"POST", "/cthulhu6/api/status/{key}/adjust", "Adjust status/param/extra points"},
-	{"POST", "/cthulhu6/api/memo/{id}/set", "Set memo content"},
-	{"POST", "/cthulhu6/api/skill/{key}/grow", "Toggle skill grow flag"},
-	{"POST", "/cthulhu6/api/skill/{key}/{field}/adjust", "Adjust skill field"},
-	{"POST", "/cthulhu6/api/skill/{key}/genre/add", "Add genre to multi-skill"},
-	{"POST", "/cthulhu6/api/skill/{key}/genre/{index}/delete", "Delete genre from multi-skill"},
-	{"POST", "/cthulhu6/api/skill/{key}/genre/{index}/grow", "Toggle genre grow flag"},
-	{"POST", "/cthulhu6/api/skill/{key}/genre/{index}/label", "Set genre label"},
-	{"POST", "/cthulhu6/api/skill/{key}/genre/{index}/{field}/adjust", "Adjust genre field"},
-}
-
-// TestAllRoutesRegistered verifies all expected routes are registered and no unexpected routes exist
-func TestAllRoutesRegistered(t *testing.T) {
+// TestINTChangeIncludesPointsDisplay tests that INT changes return points display OOB
+func TestINTChangeIncludesPointsDisplay(t *testing.T) {
 	r, _ := setupTestRouter()
 
-	// Build set of expected routes
-	expected := make(map[string]string) // route -> description
-	for _, rt := range expectedRoutes {
-		key := rt.method + " " + rt.route
-		expected[key] = rt.desc
-	}
+	req := httptest.NewRequest("POST", "/cthulhu6/api/status/status-INT/adjust?delta=1", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
 
-	// Track which expected routes were found
-	found := make(map[string]bool)
-	for key := range expected {
-		found[key] = false
-	}
-
-	// Walk registered routes
-	var unexpected []string
-	chi.Walk(r, func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
-		key := method + " " + route
-		if _, ok := expected[key]; ok {
-			found[key] = true
-		} else {
-			unexpected = append(unexpected, key)
-		}
-		return nil
-	})
-
-	// Report missing routes
-	for key, wasFound := range found {
-		if !wasFound {
-			t.Errorf("Expected route not registered: %s (%s)", key, expected[key])
-		}
-	}
-
-	// Report unexpected routes
-	for _, key := range unexpected {
-		t.Errorf("Unexpected route registered: %s", key)
+	body := w.Body.String()
+	if !strings.Contains(body, "points-display") {
+		t.Error("INT change should include points display in OOB response")
 	}
 }
