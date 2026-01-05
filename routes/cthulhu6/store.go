@@ -1,9 +1,6 @@
 package cthulhu6
 
 import (
-	"encoding/json"
-	"sync"
-
 	"charaxiv/storage/coalesce"
 	"charaxiv/systems/cthulhu6"
 )
@@ -11,33 +8,18 @@ import (
 // Store wraps coalesce.Store with cthulhu6-specific typed access.
 type Store struct {
 	coalesce *coalesce.Store
-	mu       sync.RWMutex
-
-	// In-memory cache (loaded on first access per character)
-	status map[string]*cthulhu6.Status
-	skills map[string]*cthulhu6.Skills
-	memos  map[string]map[string]string
 }
 
 // NewStore creates a new cthulhu6 store backed by coalesce storage.
 func NewStore(c *coalesce.Store) *Store {
-	return &Store{
-		coalesce: c,
-		status:   make(map[string]*cthulhu6.Status),
-		skills:   make(map[string]*cthulhu6.Skills),
-		memos:    make(map[string]map[string]string),
-	}
+	return &Store{coalesce: c}
 }
 
-// load ensures character data is loaded into memory
-func (s *Store) load(charID string) error {
-	if _, ok := s.status[charID]; ok {
-		return nil // already loaded
-	}
-
+// load reads character data from coalesce (which flushes pending writes)
+func (s *Store) load(charID string) (*cthulhu6.Status, *cthulhu6.Skills, map[string]string) {
 	data, err := s.coalesce.Read(charID)
 	if err != nil {
-		return err
+		return cthulhu6.NewStatus(), cthulhu6.NewSkills(), make(map[string]string)
 	}
 
 	// Start with defaults
@@ -79,29 +61,36 @@ func (s *Store) load(charID string) error {
 			status.DB = db
 		}
 	}
-	s.status[charID] = status
 
-	// Merge skills (for now, just unmarshal if present)
+	// Merge skills
 	if skillsData, ok := data["skills"].(map[string]any); ok {
-		if b, err := json.Marshal(skillsData); err == nil {
-			// Create a temp skills to unmarshal into, then merge
-			var loadedSkills cthulhu6.Skills
-			if json.Unmarshal(b, &loadedSkills) == nil {
-				// Merge categories
-				for cat, loadedCat := range loadedSkills.Categories {
-					if defaultCat, ok := skills.Categories[cat]; ok {
-						for skillKey, loadedSkill := range loadedCat.Skills {
-							defaultCat.Skills[skillKey] = loadedSkill
+		if catsData, ok := skillsData["categories"].(map[string]any); ok {
+			for catName, catData := range catsData {
+				cat := cthulhu6.SkillCategory(catName)
+				if defaultCat, ok := skills.Categories[cat]; ok {
+					if catMap, ok := catData.(map[string]any); ok {
+						if skillsMap, ok := catMap["skills"].(map[string]any); ok {
+							for skillKey, skillData := range skillsMap {
+								if skillMap, ok := skillData.(map[string]any); ok {
+									skill := parseSkill(skillMap)
+									defaultCat.Skills[skillKey] = skill
+								}
+							}
 						}
-						skills.Categories[cat] = defaultCat
 					}
+					skills.Categories[cat] = defaultCat
 				}
-				skills.Extra = loadedSkills.Extra
-				skills.Custom = loadedSkills.Custom
+			}
+		}
+		if extraData, ok := skillsData["extra"].(map[string]any); ok {
+			if job, ok := extraData["job"].(float64); ok {
+				skills.Extra.Job = int(job)
+			}
+			if hobby, ok := extraData["hobby"].(float64); ok {
+				skills.Extra.Hobby = int(hobby)
 			}
 		}
 	}
-	s.skills[charID] = skills
 
 	// Parse memos
 	if memosData, ok := data["memos"].(map[string]any); ok {
@@ -111,72 +100,97 @@ func (s *Store) load(charID string) error {
 			}
 		}
 	}
-	s.memos[charID] = memos
 
-	return nil
+	return status, skills, memos
+}
+
+// parseSkill parses a skill from map[string]any
+func parseSkill(data map[string]any) cthulhu6.Skill {
+	skill := cthulhu6.Skill{}
+	if order, ok := data["order"].(float64); ok {
+		skill.Order = int(order)
+	}
+	if singleData, ok := data["single"].(map[string]any); ok {
+		skill.Single = &cthulhu6.SingleSkill{}
+		if v, ok := singleData["job"].(float64); ok {
+			skill.Single.Job = int(v)
+		}
+		if v, ok := singleData["hobby"].(float64); ok {
+			skill.Single.Hobby = int(v)
+		}
+		if v, ok := singleData["perm"].(float64); ok {
+			skill.Single.Perm = int(v)
+		}
+		if v, ok := singleData["temp"].(float64); ok {
+			skill.Single.Temp = int(v)
+		}
+		if v, ok := singleData["grow"].(bool); ok {
+			skill.Single.Grow = v
+		}
+	}
+	if multiData, ok := data["multi"].(map[string]any); ok {
+		skill.Multi = &cthulhu6.MultiSkill{}
+		if genresData, ok := multiData["genres"].([]any); ok {
+			for _, gd := range genresData {
+				if gm, ok := gd.(map[string]any); ok {
+					genre := cthulhu6.SkillGenre{}
+					if v, ok := gm["label"].(string); ok {
+						genre.Label = v
+					}
+					if v, ok := gm["job"].(float64); ok {
+						genre.Job = int(v)
+					}
+					if v, ok := gm["hobby"].(float64); ok {
+						genre.Hobby = int(v)
+					}
+					if v, ok := gm["perm"].(float64); ok {
+						genre.Perm = int(v)
+					}
+					if v, ok := gm["temp"].(float64); ok {
+						genre.Temp = int(v)
+					}
+					if v, ok := gm["grow"].(bool); ok {
+						genre.Grow = v
+					}
+					skill.Multi.Genres = append(skill.Multi.Genres, genre)
+				}
+			}
+		}
+	}
+	return skill
 }
 
 // GetStatus returns the status for a character
 func (s *Store) GetStatus(charID string) *cthulhu6.Status {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.load(charID); err != nil {
-		return cthulhu6.NewStatus()
-	}
-	return s.status[charID]
+	status, _, _ := s.load(charID)
+	return status
 }
 
 // GetSkills returns the skills for a character
 func (s *Store) GetSkills(charID string) *cthulhu6.Skills {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.load(charID); err != nil {
-		return cthulhu6.NewSkills()
-	}
-	return s.skills[charID]
+	_, skills, _ := s.load(charID)
+	return skills
 }
 
 // GetMemo returns a memo value
 func (s *Store) GetMemo(charID, memoID string) string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.load(charID); err != nil {
-		return ""
-	}
-	if m, ok := s.memos[charID]; ok {
-		return m[memoID]
-	}
-	return ""
+	_, _, memos := s.load(charID)
+	return memos[memoID]
 }
 
 // SetMemo sets a memo value
 func (s *Store) SetMemo(charID, memoID, value string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.load(charID); err != nil {
+	_, _, memos := s.load(charID)
+	if memos[memoID] == value {
 		return false
 	}
-
-	if s.memos[charID] == nil {
-		s.memos[charID] = make(map[string]string)
-	}
-	if s.memos[charID][memoID] == value {
-		return false
-	}
-	s.memos[charID][memoID] = value
 	s.coalesce.Write(charID, "memos."+memoID, value)
 	return true
 }
 
 // SetVariableBase sets a variable's base value
 func (s *Store) SetVariableBase(charID, key string, value int) *cthulhu6.Variable {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.load(charID); err != nil {
-		return nil
-	}
-
-	status := s.status[charID]
+	status, _, _ := s.load(charID)
 	if v, ok := status.Variables[key]; ok {
 		if value < v.Min {
 			value = v.Min
@@ -185,7 +199,6 @@ func (s *Store) SetVariableBase(charID, key string, value int) *cthulhu6.Variabl
 			value = v.Max
 		}
 		v.Base = value
-		status.Variables[key] = v
 		s.coalesce.Write(charID, "status.variables."+key+".base", value)
 		return &v
 	}
@@ -194,13 +207,7 @@ func (s *Store) SetVariableBase(charID, key string, value int) *cthulhu6.Variabl
 
 // UpdateVariableBase updates a variable's base by delta
 func (s *Store) UpdateVariableBase(charID, key string, delta int) *cthulhu6.Variable {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.load(charID); err != nil {
-		return nil
-	}
-
-	status := s.status[charID]
+	status, _, _ := s.load(charID)
 	if v, ok := status.Variables[key]; ok {
 		newBase := v.Base + delta
 		if newBase < v.Min {
@@ -210,7 +217,6 @@ func (s *Store) UpdateVariableBase(charID, key string, delta int) *cthulhu6.Vari
 			newBase = v.Max
 		}
 		v.Base = newBase
-		status.Variables[key] = v
 		s.coalesce.Write(charID, "status.variables."+key+".base", newBase)
 		return &v
 	}
@@ -219,43 +225,24 @@ func (s *Store) UpdateVariableBase(charID, key string, delta int) *cthulhu6.Vari
 
 // UpdateParameter updates a parameter by delta
 func (s *Store) UpdateParameter(charID, key string, delta int) int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.load(charID); err != nil {
-		return 0
-	}
-
-	status := s.status[charID]
+	status, _, _ := s.load(charID)
 	current := status.EffectiveParameter(key)
 	newVal := current + delta
 	if newVal < 0 {
 		newVal = 0
 	}
-	status.Parameters[key] = &newVal
 	s.coalesce.Write(charID, "status.parameters."+key, newVal)
 	return newVal
 }
 
 // SetDamageBonus sets the damage bonus
 func (s *Store) SetDamageBonus(charID, db string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.load(charID); err != nil {
-		return
-	}
-	s.status[charID].DB = db
 	s.coalesce.Write(charID, "status.db", db)
 }
 
 // GetSkill returns a skill by key
 func (s *Store) GetSkill(charID, key string) (cthulhu6.Skill, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if err := s.load(charID); err != nil {
-		return cthulhu6.Skill{}, false
-	}
-
-	skills := s.skills[charID]
+	_, skills, _ := s.load(charID)
 	for _, catData := range skills.Categories {
 		if skill, ok := catData.Skills[key]; ok {
 			return skill, true
@@ -266,18 +253,9 @@ func (s *Store) GetSkill(charID, key string) (cthulhu6.Skill, bool) {
 
 // UpdateSkill updates a skill
 func (s *Store) UpdateSkill(charID, key string, skill cthulhu6.Skill) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.load(charID); err != nil {
-		return
-	}
-
-	skills := s.skills[charID]
+	_, skills, _ := s.load(charID)
 	for cat, catData := range skills.Categories {
 		if _, ok := catData.Skills[key]; ok {
-			catData.Skills[key] = skill
-			skills.Categories[cat] = catData
-			// Write the entire skill object
 			s.coalesce.Write(charID, "skills.categories."+string(cat)+".skills."+key, skill)
 			return
 		}
@@ -286,14 +264,5 @@ func (s *Store) UpdateSkill(charID, key string, skill cthulhu6.Skill) {
 
 // SetSkillExtra sets extra skill points
 func (s *Store) SetSkillExtra(charID string, job, hobby int) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.load(charID); err != nil {
-		return
-	}
-
-	skills := s.skills[charID]
-	skills.Extra.Job = job
-	skills.Extra.Hobby = hobby
-	s.coalesce.Write(charID, "skills.extra", skills.Extra)
+	s.coalesce.Write(charID, "skills.extra", cthulhu6.SkillExtra{Job: job, Hobby: hobby})
 }
