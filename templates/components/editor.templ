@@ -10,20 +10,20 @@ var markdownScript = templ.NewOnceHandle()
 
 // MarkdownEditor renders a textarea that will be enhanced with EasyMDE (edit mode)
 // or rendered markdown content (readonly mode)
-templ MarkdownEditor(id string, name string, title string, placeholder string, value string, readonly bool) {
+templ MarkdownEditor(id string, name string, title string, placeholder string, value string, readonly bool, basePath string) {
 	if readonly {
 		@MarkdownRenderer(title, value, false)
 	} else {
-		@MarkdownEditorEdit(id, name, placeholder, value, false)
+		@MarkdownEditorEdit(id, name, placeholder, value, false, basePath)
 	}
 }
 
 // SecretMarkdownEditor is like MarkdownEditor but with password protection
-templ SecretMarkdownEditor(id string, name string, title string, placeholder string, value string, readonly bool) {
+templ SecretMarkdownEditor(id string, name string, title string, placeholder string, value string, readonly bool, basePath string) {
 	if readonly {
 		@MarkdownRenderer(title, value, true)
 	} else {
-		@MarkdownEditorEdit(id, name, placeholder, value, true)
+		@MarkdownEditorEdit(id, name, placeholder, value, true, basePath)
 	}
 }
 
@@ -229,7 +229,7 @@ templ MarkdownRenderer(title string, content string, secret bool) {
 }
 
 // MarkdownEditorEdit renders the EasyMDE editor
-templ MarkdownEditorEdit(id string, name string, placeholder string, value string, secret bool) {
+templ MarkdownEditorEdit(id string, name string, placeholder string, value string, secret bool, basePath string) {
 	@editorDeps.Once() {
 		<!-- Load EasyMDE CSS asynchronously to avoid render blocking -->
 		<link rel="stylesheet" href="https://unpkg.com/easymde@2.18.0/dist/easymde.min.css" media="print" onload="this.media='all'"/>
@@ -413,7 +413,7 @@ templ MarkdownEditorEdit(id string, name string, placeholder string, value strin
 			class="markdown-editor"
 			placeholder={ placeholder }
 			data-secret?={ secret }
-			hx-post={ "/api/memo/" + id + "/set" }
+			hx-post={ basePath + "/api/memo/" + id + "/set" }
 			hx-trigger="input changed delay:3000ms from:closest .markdown-editor-wrapper"
 			hx-include="this"
 		>{ value }</textarea>

@@ -38,7 +38,7 @@ templ Cthulhu6PreviewToggle(pc PageContext) {
 			@components.Button(components.ButtonSolidBlue, components.ButtonSizeIcon, templ.Attributes{
 				"id":        "preview-toggle",
 				"title":     "Exit preview mode",
-				"hx-post":   "/api/preview/off",
+				"hx-post":   pc.API("/api/preview/off"),
 				"hx-target": "#memo-group",
 				"hx-swap":   "outerHTML",
 			}) {
@@ -48,7 +48,7 @@ templ Cthulhu6PreviewToggle(pc PageContext) {
 			@components.Button(components.ButtonGhost, components.ButtonSizeIcon, templ.Attributes{
 				"id":        "preview-toggle",
 				"title":     "Preview as visitor",
-				"hx-post":   "/api/preview/on",
+				"hx-post":   pc.API("/api/preview/on"),
 				"hx-target": "#memo-group",
 				"hx-swap":   "outerHTML",
 			}) {

@@ -18,7 +18,8 @@ type NumberInputConfig struct {
 	Max         *int // nil means no maximum
 	Placeholder string
 	Readonly    bool
-	HxPost      string // Base path for adjust endpoint (e.g., "/api/skill/回避/job/adjust"), defaults to "/api/status/{ID}/adjust"
+	BasePath    string // URL prefix for API routes (e.g., "/cthulhu6")
+	HxPost      string // Path for adjust endpoint (e.g., "/api/skill/回避/job/adjust"), defaults to "/api/status/{ID}/adjust"
 	HxTarget    string // Target selector, defaults to self ("#{ID}-wrapper")
 	HxSwap      string // Swap strategy, defaults to "outerHTML". Use "none" for OOB-only responses.
 }
@@ -47,12 +48,17 @@ func (c NumberInputConfig) maxVal() int {
 func (c NumberInputConfig) atMin() bool { return c.Min != nil && c.Value <= *c.Min }
 func (c NumberInputConfig) atMax() bool { return c.Max != nil && c.Value >= *c.Max }
 
-// adjustPath returns the base path for the adjust endpoint
+// adjustPath returns the full path for the adjust endpoint
 func (c NumberInputConfig) adjustPath() string {
 	if c.HxPost != "" {
-		return c.HxPost
+		return c.BasePath + c.HxPost
 	}
-	return fmt.Sprintf("/api/status/%s/adjust", c.ID)
+	return c.BasePath + fmt.Sprintf("/api/status/%s/adjust", c.ID)
+}
+
+// setPath returns the full path for the set endpoint
+func (c NumberInputConfig) setPath() string {
+	return c.BasePath + fmt.Sprintf("/api/status/%s/set", c.ID)
 }
 
 // targetSelector returns the hx-target selector
@@ -205,7 +211,7 @@ templ NumberInput(cfg NumberInputConfig) {
 			}
 			readonly?={ cfg.Readonly }
 			if !cfg.Readonly {
-				hx-post={ fmt.Sprintf("/api/status/%s/set", cfg.ID) }
+				hx-post={ cfg.setPath() }
 				hx-trigger="input changed delay:300ms"
 				hx-include="this"
 			}

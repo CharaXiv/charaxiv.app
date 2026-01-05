@@ -610,6 +610,7 @@ templ ExtraPointsForm(pc PageContext, extra SkillExtra) {
 					Min:         Ptr(0),
 					Placeholder: "0",
 					Readonly:    pc.IsReadOnly(),
+					BasePath:    pc.BasePath,
 					HxSwap:      "none",
 				})
 			</div>
@@ -622,6 +623,7 @@ templ ExtraPointsForm(pc PageContext, extra SkillExtra) {
 					Min:         Ptr(0),
 					Placeholder: "0",
 					Readonly:    pc.IsReadOnly(),
+					BasePath:    pc.BasePath,
 					HxSwap:      "none",
 				})
 			</div>
@@ -655,7 +657,7 @@ templ SkillRow(pc PageContext, skill Skill, remaining SkillPoints) {
 				class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", data.Grow) }
 				title="成長チェック"
 				disabled?={ pc.IsReadOnly() }
-				hx-post={ fmt.Sprintf("/api/skill/%s/grow", skill.Key) }
+				hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/%s/grow", skill.Key) }
 				hx-target="#skills-panel"
 				hx-swap="outerHTML"
 				onclick="event.stopPropagation()"
@@ -740,25 +742,25 @@ templ SkillDetail(pc PageContext, skill Skill, remaining SkillPoints) {
 	<div class="skill-detail">
 		<span class="skill-detail-label">職業P</span>
 		<div class="skill-detail-wrapper">
-			@NumberInput(skillInputConfig(skill.Key, "job", data.Job, 0, jobMax, pc.IsReadOnly()))
+			@NumberInput(skillInputConfig(skill.Key, "job", data.Job, 0, jobMax, pc.IsReadOnly(), pc.BasePath))
 		</div>
 		<span class="skill-detail-label">興味P</span>
 		<div class="skill-detail-wrapper">
-			@NumberInput(skillInputConfig(skill.Key, "hobby", data.Hobby, 0, hobbyMax, pc.IsReadOnly()))
+			@NumberInput(skillInputConfig(skill.Key, "hobby", data.Hobby, 0, hobbyMax, pc.IsReadOnly(), pc.BasePath))
 		</div>
 		<span class="skill-detail-label">増加分</span>
 		<div class="skill-detail-wrapper">
-			@NumberInput(skillInputConfig(skill.Key, "perm", data.Perm, -(total - data.Perm), permMax, pc.IsReadOnly()))
+			@NumberInput(skillInputConfig(skill.Key, "perm", data.Perm, -(total - data.Perm), permMax, pc.IsReadOnly(), pc.BasePath))
 		</div>
 		<span class="skill-detail-label">一時的</span>
 		<div class="skill-detail-wrapper">
-			@NumberInput(skillInputConfig(skill.Key, "temp", data.Temp, -(total - data.Temp), tempMax, pc.IsReadOnly()))
+			@NumberInput(skillInputConfig(skill.Key, "temp", data.Temp, -(total - data.Temp), tempMax, pc.IsReadOnly(), pc.BasePath))
 		</div>
 	</div>
 }
 
 // skillInputConfig creates a NumberInputConfig for skill fields
-func skillInputConfig(skillKey, field string, value, minVal, maxVal int, readonly bool) NumberInputConfig {
+func skillInputConfig(skillKey, field string, value, minVal, maxVal int, readonly bool, basePath string) NumberInputConfig {
 	id := fmt.Sprintf("skill-%s-%s", skillKey, field)
 	return NumberInputConfig{
 		ID:       id,
@@ -767,13 +769,14 @@ func skillInputConfig(skillKey, field string, value, minVal, maxVal int, readonl
 		Min:      Ptr(minVal),
 		Max:      Ptr(maxVal),
 		Readonly: readonly,
+		BasePath: basePath,
 		HxPost:   fmt.Sprintf("/api/skill/%s/%s/adjust", skillKey, field),
 	}
 }
 
 // SkillNumberInput renders a number input for skill values
 // SkillUpdateFragments returns the input wrapper plus OOB swaps for related displays
-templ Cthulhu6SkillUpdateFragments(skill Skill, field string, remaining SkillPoints) {
+templ Cthulhu6SkillUpdateFragments(skill Skill, field string, remaining SkillPoints, basePath string) {
 	{{
 		data := skill.Single
 		total := skill.Total()
@@ -797,7 +800,7 @@ templ Cthulhu6SkillUpdateFragments(skill Skill, field string, remaining SkillPoi
 			maxVal = 99 - (total - data.Temp)
 		}
 	}}
-	@NumberInput(skillInputConfig(skill.Key, field, value, minVal, maxVal, false))
+	@NumberInput(skillInputConfig(skill.Key, field, value, minVal, maxVal, false, basePath))
 	@SkillName(skill, true)
 	@SkillPointsBreakdown(skill, true)
 	@SkillTotal(skill, true)
@@ -823,7 +826,7 @@ templ SkillMulti(pc PageContext, skill Skill, remaining SkillPoints) {
 						type="button"
 						class="skill-multi-add"
 						title={ fmt.Sprintf("「%s」技能を追加", skill.Key) }
-						hx-post={ fmt.Sprintf("/api/skill/%s/genre/add", skill.Key) }
+						hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/%s/genre/add", skill.Key) }
 						hx-target="#skills-panel"
 						hx-swap="outerHTML"
 					>
@@ -843,7 +846,7 @@ templ SkillMulti(pc PageContext, skill Skill, remaining SkillPoints) {
 				<button
 					type="button"
 					class="skill-multi-empty-btn"
-					hx-post={ fmt.Sprintf("/api/skill/%s/genre/add", skill.Key) }
+					hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/%s/genre/add", skill.Key) }
 					hx-target="#skills-panel"
 					hx-swap="outerHTML"
 				>
@@ -866,7 +869,7 @@ templ SkillGenreRow(pc PageContext, skillKey string, init int, index int, genre 
 				class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", genre.Grow) }
 				title="成長チェック"
 				disabled?={ pc.IsReadOnly() }
-				hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/grow", skillKey, index) }
+				hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/%s/genre/%d/grow", skillKey, index) }
 				hx-target="#skills-panel"
 				hx-swap="outerHTML"
 				onclick="event.stopPropagation()"
@@ -884,7 +887,7 @@ templ SkillGenreRow(pc PageContext, skillKey string, init int, index int, genre 
 					value={ genre.Label }
 					placeholder={ skillKey }
 					onclick="event.stopPropagation()"
-					hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/label", skillKey, index) }
+					hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/%s/genre/%d/label", skillKey, index) }
 					hx-trigger="change"
 					hx-swap="none"
 					name="label"
@@ -935,25 +938,25 @@ templ GenreDetail(pc PageContext, skillKey string, init int, index int, genre Sk
 		<div class="genre-detail-grid">
 			<span class="skill-detail-label">職業P</span>
 			<div class="skill-detail-wrapper">
-				@NumberInput(genreInputConfig(skillKey, index, "job", genre.Job, 0, jobMax, pc.IsReadOnly()))
+				@NumberInput(genreInputConfig(skillKey, index, "job", genre.Job, 0, jobMax, pc.IsReadOnly(), pc.BasePath))
 			</div>
 			<span class="skill-detail-label">興味P</span>
 			<div class="skill-detail-wrapper">
-				@NumberInput(genreInputConfig(skillKey, index, "hobby", genre.Hobby, 0, hobbyMax, pc.IsReadOnly()))
+				@NumberInput(genreInputConfig(skillKey, index, "hobby", genre.Hobby, 0, hobbyMax, pc.IsReadOnly(), pc.BasePath))
 			</div>
 			<span class="skill-detail-label">増加分</span>
 			<div class="skill-detail-wrapper">
-				@NumberInput(genreInputConfig(skillKey, index, "perm", genre.Perm, -(total - genre.Perm), permMax, pc.IsReadOnly()))
+				@NumberInput(genreInputConfig(skillKey, index, "perm", genre.Perm, -(total - genre.Perm), permMax, pc.IsReadOnly(), pc.BasePath))
 			</div>
 			<span class="skill-detail-label">一時的</span>
 			<div class="skill-detail-wrapper">
-				@NumberInput(genreInputConfig(skillKey, index, "temp", genre.Temp, -(total - genre.Temp), tempMax, pc.IsReadOnly()))
+				@NumberInput(genreInputConfig(skillKey, index, "temp", genre.Temp, -(total - genre.Temp), tempMax, pc.IsReadOnly(), pc.BasePath))
 			</div>
 		</div>
 		<button
 			type="button"
 			class="genre-delete-btn"
-			hx-post={ fmt.Sprintf("/api/skill/%s/genre/%d/delete", skillKey, index) }
+			hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/%s/genre/%d/delete", skillKey, index) }
 			hx-target="#skills-panel"
 			hx-swap="outerHTML"
 			hx-confirm={ fmt.Sprintf("「%s」技能を削除しますか？", genreLabelOrKey(genre.Label, skillKey)) }
@@ -964,7 +967,7 @@ templ GenreDetail(pc PageContext, skillKey string, init int, index int, genre Sk
 }
 
 // genreInputConfig creates a NumberInputConfig for genre fields
-func genreInputConfig(skillKey string, genreIndex int, field string, value, minVal, maxVal int, readonly bool) NumberInputConfig {
+func genreInputConfig(skillKey string, genreIndex int, field string, value, minVal, maxVal int, readonly bool, basePath string) NumberInputConfig {
 	id := fmt.Sprintf("genre-%s-%d-%s", skillKey, genreIndex, field)
 	return NumberInputConfig{
 		ID:       id,
@@ -973,6 +976,7 @@ func genreInputConfig(skillKey string, genreIndex int, field string, value, minV
 		Min:      Ptr(minVal),
 		Max:      Ptr(maxVal),
 		Readonly: readonly,
+		BasePath: basePath,
 		HxPost:   fmt.Sprintf("/api/skill/%s/genre/%d/%s/adjust", skillKey, genreIndex, field),
 	}
 }

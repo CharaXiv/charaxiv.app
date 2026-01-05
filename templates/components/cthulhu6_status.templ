@@ -301,6 +301,7 @@ templ StatusRow(pc PageContext, v StatusVariable) {
 			Max:         Ptr(v.Max),
 			Placeholder: v.Key,
 			Readonly:    pc.IsReadOnly(),
+			BasePath:    pc.BasePath,
 		})
 	</div>
 	<div class="status-sum">{ strconv.Itoa(v.Sum()) }</div>
@@ -317,6 +318,7 @@ templ ParameterRow(pc PageContext, p StatusParameter) {
 			Min:         Ptr(0),
 			Placeholder: strconv.Itoa(p.DefaultValue),
 			Readonly:    pc.IsReadOnly(),
+			BasePath:    pc.BasePath,
 			HxSwap:      "none",
 		})
 	</div>

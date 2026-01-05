@@ -8,6 +8,8 @@ type PageContext struct {
 	Preview bool
 	// Memos holds memo content by ID
 	Memos map[string]string
+	// BasePath is the URL prefix for API routes (e.g., "/cthulhu6")
+	BasePath string
 }
 
 // IsReadOnly returns true if the character should be displayed in read-only mode.
@@ -19,10 +21,16 @@ func (pc PageContext) IsReadOnly() bool {
 // NewPageContext creates a PageContext with default values
 func NewPageContext() PageContext {
 	return PageContext{
-		IsOwner: true, // Hard-coded for development
-		Preview: false,
-		Memos:   make(map[string]string),
+		IsOwner:  true, // Hard-coded for development
+		Preview:  false,
+		Memos:    make(map[string]string),
+		BasePath: "",
 	}
+}
+
+// API returns the full API path for the given endpoint
+func (pc PageContext) API(path string) string {
+	return pc.BasePath + path
 }
 
 // GetMemo returns the memo content for the given ID

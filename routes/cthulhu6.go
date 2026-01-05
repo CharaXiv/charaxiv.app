@@ -23,9 +23,12 @@ func html(c func(r *http.Request) templ.Component) http.HandlerFunc {
 	}
 }
 
+const basePath = "/cthulhu6"
+
 // buildPageContext creates a PageContext with memos loaded from the store
 func buildPageContext(store *models.Store) shared.PageContext {
 	ctx := shared.NewPageContext()
+	ctx.BasePath = basePath
 	// Load all memos
 	memoIDs := []string{"public-memo", "secret-memo", "scenario-public-memo", "scenario-secret-memo"}
 	for _, id := range memoIDs {
@@ -208,7 +211,7 @@ func Cthulhu6(charStore *models.Store) chi.Router {
 		templSkill := cthulhu6.BuildSkill(status, key, updatedSkill)
 		remaining := cthulhu6.BuildRemainingPoints(status, skills)
 
-		return components.Cthulhu6SkillUpdateFragments(templSkill, field, remaining)
+		return components.Cthulhu6SkillUpdateFragments(templSkill, field, remaining, basePath)
 	}))
 
 	// Add genre to multi-skill
