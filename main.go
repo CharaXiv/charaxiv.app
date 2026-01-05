@@ -11,11 +11,12 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
-	"charaxiv/models"
 	"charaxiv/storage"
+	"charaxiv/storage/coalesce"
 )
 
 // proxyWebSocket proxies a WebSocket connection to the target host.
@@ -74,8 +75,20 @@ func main() {
 	// Dev mode: notify reloader when server is ready (after ListenAndServe starts)
 	devMode := os.Getenv("DEV") == "1"
 
-	// Initialize character store (in-memory for now)
-	charStore := models.NewStore()
+	// Initialize coalesce store for character data
+	dataDir := os.Getenv("DATA_DIR")
+	if dataDir == "" {
+		dataDir = "data"
+	}
+	cs, err := coalesce.New(coalesce.Config{
+		DBPath:  filepath.Join(dataDir, "buffer.db"),
+		DataDir: filepath.Join(dataDir, "characters"),
+	})
+	if err != nil {
+		log.Fatalf("Failed to initialize coalesce store: %v", err)
+	}
+	defer cs.Close()
+	log.Printf("Coalesce store initialized: %s", dataDir)
 
 	// Initialize storage
 	var store storage.Storage
@@ -98,7 +111,7 @@ func main() {
 	}
 
 	// Build server with application routes
-	r := NewServer(charStore)
+	r := NewServer(cs)
 
 	// Dev mode: proxy to reloader (including WebSocket)
 	if os.Getenv("DEV") == "1" {

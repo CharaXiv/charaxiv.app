@@ -1,16 +1,18 @@
-package routes
+package cthulhu6
 
 import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
 
-	"charaxiv/models"
+	"charaxiv/storage/coalesce"
 	"charaxiv/systems/cthulhu6"
 )
 
@@ -19,10 +21,10 @@ type RouteTest struct {
 	Method       string
 	Route        string
 	Desc         string
-	TestURL      string              // Actual URL to test (with params filled in)
-	Form         url.Values          // Form data to send
-	Query        string              // Query string (e.g., "delta=1")
-	Setup        func(*models.Store) // Optional setup before test
+	TestURL      string       // Actual URL to test (with params filled in)
+	Form         url.Values   // Form data to send
+	Query        string       // Query string (e.g., "delta=1")
+	Setup        func(*Store) // Optional setup before test
 	WantCode     int
 	WantContains []string // Strings that should be in response body
 }
@@ -128,11 +130,11 @@ var routeTests = []RouteTest{
 		Route:   "/cthulhu6/api/skill/{key}/genre/{index}/delete",
 		Desc:    "Delete genre from multi-skill",
 		TestURL: "/cthulhu6/api/skill/芸術/genre/0/delete",
-		Setup: func(s *models.Store) {
+		Setup: func(s *Store) {
 			// Add a genre first so we can delete it
-			skill, _ := s.GetSkill("芸術")
+			skill, _ := s.GetSkill("demo", "芸術")
 			skill.Multi.Genres = append(skill.Multi.Genres, cthulhu6.SkillGenre{})
-			s.UpdateSkill("芸術", skill)
+			s.UpdateSkill("demo", "芸術", skill)
 		},
 		WantCode:     http.StatusOK,
 		WantContains: []string{"skills-panel"},
@@ -142,10 +144,10 @@ var routeTests = []RouteTest{
 		Route:   "/cthulhu6/api/skill/{key}/genre/{index}/grow",
 		Desc:    "Toggle genre grow flag",
 		TestURL: "/cthulhu6/api/skill/芸術/genre/0/grow",
-		Setup: func(s *models.Store) {
-			skill, _ := s.GetSkill("芸術")
+		Setup: func(s *Store) {
+			skill, _ := s.GetSkill("demo", "芸術")
 			skill.Multi.Genres = append(skill.Multi.Genres, cthulhu6.SkillGenre{})
-			s.UpdateSkill("芸術", skill)
+			s.UpdateSkill("demo", "芸術", skill)
 		},
 		WantCode:     http.StatusOK,
 		WantContains: []string{"skills-panel"},
@@ -156,10 +158,10 @@ var routeTests = []RouteTest{
 		Desc:    "Set genre label",
 		TestURL: "/cthulhu6/api/skill/芸術/genre/0/label",
 		Form:    url.Values{"label": {"絵画"}},
-		Setup: func(s *models.Store) {
-			skill, _ := s.GetSkill("芸術")
+		Setup: func(s *Store) {
+			skill, _ := s.GetSkill("demo", "芸術")
 			skill.Multi.Genres = append(skill.Multi.Genres, cthulhu6.SkillGenre{})
-			s.UpdateSkill("芸術", skill)
+			s.UpdateSkill("demo", "芸術", skill)
 		},
 		WantCode:     http.StatusOK,
 		WantContains: nil, // Returns empty
@@ -170,10 +172,10 @@ var routeTests = []RouteTest{
 		Desc:    "Adjust genre field",
 		TestURL: "/cthulhu6/api/skill/芸術/genre/0/job/adjust",
 		Query:   "delta=5",
-		Setup: func(s *models.Store) {
-			skill, _ := s.GetSkill("芸術")
+		Setup: func(s *Store) {
+			skill, _ := s.GetSkill("demo", "芸術")
 			skill.Multi.Genres = append(skill.Multi.Genres, cthulhu6.SkillGenre{})
-			s.UpdateSkill("芸術", skill)
+			s.UpdateSkill("demo", "芸術", skill)
 		},
 		WantCode:     http.StatusOK,
 		WantContains: []string{"skills-panel"},
@@ -184,7 +186,8 @@ var routeTests = []RouteTest{
 func TestRoutes(t *testing.T) {
 	for _, tt := range routeTests {
 		t.Run(tt.Desc, func(t *testing.T) {
-			r, store := setupTestRouter()
+			r, store, cleanup := setupTestRouter(t)
+			defer cleanup()
 
 			// Run setup if provided
 			if tt.Setup != nil {
@@ -230,7 +233,8 @@ func TestRoutes(t *testing.T) {
 
 // TestAllRoutesHaveTests verifies every registered route has a test case
 func TestAllRoutesHaveTests(t *testing.T) {
-	r, _ := setupTestRouter()
+	r, _, cleanup := setupTestRouter(t)
+	defer cleanup()
 
 	// Build set of routes that have tests
 	testedRoutes := make(map[string]bool)
@@ -272,21 +276,44 @@ func TestAllRoutesHaveTests(t *testing.T) {
 }
 
 // setupTestRouter creates a test router with a fresh store.
-// Uses the same Cthulhu6 router constructor as the production code.
-func setupTestRouter() (chi.Router, *models.Store) {
-	store := models.NewStore()
+func setupTestRouter(t *testing.T) (chi.Router, *Store, func()) {
+	t.Helper()
+
+	// Create temp directory for test data
+	tmpDir, err := os.MkdirTemp("", "cthulhu6-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+
+	cs, err := coalesce.New(coalesce.Config{
+		DBPath:  filepath.Join(tmpDir, "buffer.db"),
+		DataDir: filepath.Join(tmpDir, "characters"),
+	})
+	if err != nil {
+		os.RemoveAll(tmpDir)
+		t.Fatalf("Failed to create coalesce store: %v", err)
+	}
+
+	store := NewStore(cs)
 	r := chi.NewRouter()
-	r.Mount("/cthulhu6", Cthulhu6(store))
-	return r, store
+	r.Mount("/cthulhu6", Routes(store))
+
+	cleanup := func() {
+		cs.Close()
+		os.RemoveAll(tmpDir)
+	}
+
+	return r, store, cleanup
 }
 
 // Additional focused tests for specific behaviors
 
 // TestStatusSetNoChange tests that unchanged values return 204
 func TestStatusSetNoChange(t *testing.T) {
-	r, store := setupTestRouter()
+	r, store, cleanup := setupTestRouter(t)
+	defer cleanup()
 
-	initialSTR := store.GetStatus().Variables["STR"].Base
+	initialSTR := store.GetStatus("demo").Variables["STR"].Base
 
 	form := url.Values{}
 	form.Set("status_STR", fmt.Sprintf("%d", initialSTR))
@@ -302,9 +329,10 @@ func TestStatusSetNoChange(t *testing.T) {
 
 // TestSkillAdjustChangesValue tests that skill adjustment actually changes the value
 func TestSkillAdjustChangesValue(t *testing.T) {
-	r, store := setupTestRouter()
+	r, store, cleanup := setupTestRouter(t)
+	defer cleanup()
 
-	skill, _ := store.GetSkill("回避")
+	skill, _ := store.GetSkill("demo", "回避")
 	initialJob := skill.Single.Job
 
 	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/回避/job/adjust?delta=5", nil)
@@ -315,7 +343,7 @@ func TestSkillAdjustChangesValue(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	skill, _ = store.GetSkill("回避")
+	skill, _ = store.GetSkill("demo", "回避")
 	if skill.Single.Job != initialJob+5 {
 		t.Errorf("Expected job to be %d, got %d", initialJob+5, skill.Single.Job)
 	}
@@ -323,13 +351,14 @@ func TestSkillAdjustChangesValue(t *testing.T) {
 
 // TestSkillAdjustNonNegative tests that job/hobby can't go below 0
 func TestSkillAdjustNonNegative(t *testing.T) {
-	r, store := setupTestRouter()
+	r, store, cleanup := setupTestRouter(t)
+	defer cleanup()
 
 	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/回避/job/adjust?delta=-100", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	skill, _ := store.GetSkill("回避")
+	skill, _ := store.GetSkill("demo", "回避")
 	if skill.Single.Job < 0 {
 		t.Error("Expected job to not go below 0")
 	}
@@ -337,7 +366,8 @@ func TestSkillAdjustNonNegative(t *testing.T) {
 
 // TestMemoSetChangesValue tests that memo is actually saved
 func TestMemoSetChangesValue(t *testing.T) {
-	r, store := setupTestRouter()
+	r, store, cleanup := setupTestRouter(t)
+	defer cleanup()
 
 	form := url.Values{}
 	form.Set("public-memo", "Test memo content")
@@ -346,23 +376,24 @@ func TestMemoSetChangesValue(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if store.GetMemo("public-memo") != "Test memo content" {
+	if store.GetMemo("demo", "public-memo") != "Test memo content" {
 		t.Error("Expected memo to be saved")
 	}
 }
 
 // TestGenreAddChangesCount tests that adding a genre increases the count
 func TestGenreAddChangesCount(t *testing.T) {
-	r, store := setupTestRouter()
+	r, store, cleanup := setupTestRouter(t)
+	defer cleanup()
 
-	skill, _ := store.GetSkill("芸術")
+	skill, _ := store.GetSkill("demo", "芸術")
 	initialCount := len(skill.Multi.Genres)
 
 	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/芸術/genre/add", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	skill, _ = store.GetSkill("芸術")
+	skill, _ = store.GetSkill("demo", "芸術")
 	if len(skill.Multi.Genres) != initialCount+1 {
 		t.Errorf("Expected %d genres, got %d", initialCount+1, len(skill.Multi.Genres))
 	}
@@ -370,7 +401,8 @@ func TestGenreAddChangesCount(t *testing.T) {
 
 // TestInvalidSkillReturnsEmpty tests handling of invalid skill keys
 func TestInvalidSkillReturnsEmpty(t *testing.T) {
-	r, _ := setupTestRouter()
+	r, _, cleanup := setupTestRouter(t)
+	defer cleanup()
 
 	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/nonexistent/grow", nil)
 	w := httptest.NewRecorder()
@@ -387,7 +419,8 @@ func TestInvalidSkillReturnsEmpty(t *testing.T) {
 
 // TestOOBFragmentsHaveCorrectBasePath tests that OOB fragments have correct API paths
 func TestOOBFragmentsHaveCorrectBasePath(t *testing.T) {
-	r, _ := setupTestRouter()
+	r, _, cleanup := setupTestRouter(t)
+	defer cleanup()
 
 	req := httptest.NewRequest("POST", "/cthulhu6/api/skill/回避/grow", nil)
 	w := httptest.NewRecorder()
@@ -406,7 +439,8 @@ func TestOOBFragmentsHaveCorrectBasePath(t *testing.T) {
 
 // TestDEXChangeIncludesSkillsPanel tests that DEX changes return skills panel OOB
 func TestDEXChangeIncludesSkillsPanel(t *testing.T) {
-	r, _ := setupTestRouter()
+	r, _, cleanup := setupTestRouter(t)
+	defer cleanup()
 
 	req := httptest.NewRequest("POST", "/cthulhu6/api/status/status-DEX/adjust?delta=1", nil)
 	w := httptest.NewRecorder()
@@ -420,7 +454,8 @@ func TestDEXChangeIncludesSkillsPanel(t *testing.T) {
 
 // TestINTChangeIncludesPointsDisplay tests that INT changes return points display OOB
 func TestINTChangeIncludesPointsDisplay(t *testing.T) {
-	r, _ := setupTestRouter()
+	r, _, cleanup := setupTestRouter(t)
+	defer cleanup()
 
 	req := httptest.NewRequest("POST", "/cthulhu6/api/status/status-INT/adjust?delta=1", nil)
 	w := httptest.NewRecorder()
