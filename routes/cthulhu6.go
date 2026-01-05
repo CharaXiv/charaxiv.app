@@ -112,7 +112,7 @@ func Cthulhu6(charStore *models.Store) chi.Router {
 		}
 
 		// Return the full status panel
-		pc := shared.NewPageContext()
+		pc := buildPageContext(charStore)
 		status = charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
@@ -162,7 +162,7 @@ func Cthulhu6(charStore *models.Store) chi.Router {
 		skill.Single.Grow = !skill.Single.Grow
 		charStore.UpdateSkill(key, skill)
 
-		pc := shared.NewPageContext()
+		pc := buildPageContext(charStore)
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
@@ -227,7 +227,7 @@ func Cthulhu6(charStore *models.Store) chi.Router {
 		skill.Multi.Genres = append(skill.Multi.Genres, cthulhu6.SkillGenre{})
 		charStore.UpdateSkill(key, skill)
 
-		pc := shared.NewPageContext()
+		pc := buildPageContext(charStore)
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
@@ -250,7 +250,7 @@ func Cthulhu6(charStore *models.Store) chi.Router {
 		skill.Multi.Genres = append(skill.Multi.Genres[:index], skill.Multi.Genres[index+1:]...)
 		charStore.UpdateSkill(key, skill)
 
-		pc := shared.NewPageContext()
+		pc := buildPageContext(charStore)
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
@@ -272,7 +272,7 @@ func Cthulhu6(charStore *models.Store) chi.Router {
 		skill.Multi.Genres[index].Grow = !skill.Multi.Genres[index].Grow
 		charStore.UpdateSkill(key, skill)
 
-		pc := shared.NewPageContext()
+		pc := buildPageContext(charStore)
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
@@ -336,7 +336,7 @@ func Cthulhu6(charStore *models.Store) chi.Router {
 
 		charStore.UpdateSkill(key, skill)
 
-		pc := shared.NewPageContext()
+		pc := buildPageContext(charStore)
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
@@ -367,7 +367,7 @@ func Cthulhu6(charStore *models.Store) chi.Router {
 			}
 			charStore.SetSkillExtra(skills.Extra.Job, skills.Extra.Hobby)
 
-			pc := shared.NewPageContext()
+			pc := buildPageContext(charStore)
 			status := charStore.GetStatus()
 			skills = charStore.GetSkills()
 			state := cthulhu6.BuildSheetState(pc, status, skills)
@@ -383,7 +383,7 @@ func Cthulhu6(charStore *models.Store) chi.Router {
 
 			charStore.UpdateParameter(paramKey, delta)
 
-			pc := shared.NewPageContext()
+			pc := buildPageContext(charStore)
 			status := charStore.GetStatus()
 			skills := charStore.GetSkills()
 			state := cthulhu6.BuildSheetState(pc, status, skills)
@@ -397,7 +397,7 @@ func Cthulhu6(charStore *models.Store) chi.Router {
 		delta := 0
 		fmt.Sscanf(deltaStr, "%d", &delta)
 
-		pc := shared.NewPageContext()
+		pc := buildPageContext(charStore)
 		updated := charStore.UpdateVariableBase(key, delta)
 		if updated == nil {
 			return shared.Empty()
