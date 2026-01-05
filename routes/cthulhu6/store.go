@@ -90,6 +90,33 @@ func (s *Store) load(charID string) (*cthulhu6.Status, *cthulhu6.Skills, map[str
 				skills.Extra.Hobby = int(hobby)
 			}
 		}
+		// Parse custom skills
+		if customData, ok := skillsData["custom"].([]any); ok {
+			for _, cd := range customData {
+				if cm, ok := cd.(map[string]any); ok {
+					cs := cthulhu6.CustomSkill{}
+					if v, ok := cm["name"].(string); ok {
+						cs.Name = v
+					}
+					if v, ok := cm["job"].(float64); ok {
+						cs.Job = int(v)
+					}
+					if v, ok := cm["hobby"].(float64); ok {
+						cs.Hobby = int(v)
+					}
+					if v, ok := cm["perm"].(float64); ok {
+						cs.Perm = int(v)
+					}
+					if v, ok := cm["temp"].(float64); ok {
+						cs.Temp = int(v)
+					}
+					if v, ok := cm["grow"].(bool); ok {
+						cs.Grow = v
+					}
+					skills.Custom = append(skills.Custom, cs)
+				}
+			}
+		}
 	}
 
 	// Parse memos
@@ -265,4 +292,43 @@ func (s *Store) UpdateSkill(charID, key string, skill cthulhu6.Skill) {
 // SetSkillExtra sets extra skill points
 func (s *Store) SetSkillExtra(charID string, job, hobby int) {
 	s.coalesce.Write(charID, "skills.extra", cthulhu6.SkillExtra{Job: job, Hobby: hobby})
+}
+
+// GetCustomSkill returns a custom skill by index
+func (s *Store) GetCustomSkill(charID string, index int) (cthulhu6.CustomSkill, bool) {
+	_, skills, _ := s.load(charID)
+	if index < 0 || index >= len(skills.Custom) {
+		return cthulhu6.CustomSkill{}, false
+	}
+	return skills.Custom[index], true
+}
+
+// AddCustomSkill adds a new custom skill and returns the updated list
+func (s *Store) AddCustomSkill(charID string) []cthulhu6.CustomSkill {
+	_, skills, _ := s.load(charID)
+	skills.Custom = append(skills.Custom, cthulhu6.CustomSkill{})
+	s.coalesce.Write(charID, "skills.custom", skills.Custom)
+	return skills.Custom
+}
+
+// DeleteCustomSkill removes a custom skill by index
+func (s *Store) DeleteCustomSkill(charID string, index int) bool {
+	_, skills, _ := s.load(charID)
+	if index < 0 || index >= len(skills.Custom) {
+		return false
+	}
+	skills.Custom = append(skills.Custom[:index], skills.Custom[index+1:]...)
+	s.coalesce.Write(charID, "skills.custom", skills.Custom)
+	return true
+}
+
+// UpdateCustomSkill updates a custom skill at given index
+func (s *Store) UpdateCustomSkill(charID string, index int, cs cthulhu6.CustomSkill) bool {
+	_, skills, _ := s.load(charID)
+	if index < 0 || index >= len(skills.Custom) {
+		return false
+	}
+	skills.Custom[index] = cs
+	s.coalesce.Write(charID, "skills.custom", skills.Custom)
+	return true
 }

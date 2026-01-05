@@ -321,6 +321,122 @@ func Routes(store *Store) chi.Router {
 		return components.Cthulhu6SkillsPanel(state, true)
 	}))
 
+	// Custom skill: add
+	r.Post("/api/skill/custom/add", html(func(r *http.Request) templ.Component {
+		store.AddCustomSkill(charID)
+
+		pc := buildPageContext(store, charID, basePath)
+		status := store.GetStatus(charID)
+		skills := store.GetSkills(charID)
+		state := cthulhu6.BuildSheetState(pc, status, skills)
+		return components.Cthulhu6SkillsPanel(state, true)
+	}))
+
+	// Custom skill: delete
+	r.Post("/api/skill/custom/{index}/delete", html(func(r *http.Request) templ.Component {
+		indexStr := chi.URLParam(r, "index")
+		index := 0
+		fmt.Sscanf(indexStr, "%d", &index)
+
+		if !store.DeleteCustomSkill(charID, index) {
+			return shared.Empty()
+		}
+
+		pc := buildPageContext(store, charID, basePath)
+		status := store.GetStatus(charID)
+		skills := store.GetSkills(charID)
+		state := cthulhu6.BuildSheetState(pc, status, skills)
+		return components.Cthulhu6SkillsPanel(state, true)
+	}))
+
+	// Custom skill: grow toggle
+	r.Post("/api/skill/custom/{index}/grow", html(func(r *http.Request) templ.Component {
+		indexStr := chi.URLParam(r, "index")
+		index := 0
+		fmt.Sscanf(indexStr, "%d", &index)
+
+		cs, ok := store.GetCustomSkill(charID, index)
+		if !ok {
+			return shared.Empty()
+		}
+
+		cs.Grow = !cs.Grow
+		store.UpdateCustomSkill(charID, index, cs)
+
+		pc := buildPageContext(store, charID, basePath)
+		return components.Cthulhu6CustomSkillGrowUpdateFragments(pc, index, cs.Grow)
+	}))
+
+	// Custom skill: name update
+	r.Post("/api/skill/custom/{index}/name", html(func(r *http.Request) templ.Component {
+		indexStr := chi.URLParam(r, "index")
+		index := 0
+		fmt.Sscanf(indexStr, "%d", &index)
+
+		cs, ok := store.GetCustomSkill(charID, index)
+		if !ok {
+			return shared.Empty()
+		}
+
+		r.ParseForm()
+		cs.Name = r.FormValue("name")
+		store.UpdateCustomSkill(charID, index, cs)
+
+		return shared.Empty()
+	}))
+
+	// Custom skill: field adjustment (job, hobby, perm, temp)
+	r.Post("/api/skill/custom/{index}/{field}/adjust", html(func(r *http.Request) templ.Component {
+		indexStr := chi.URLParam(r, "index")
+		field := chi.URLParam(r, "field")
+		index := 0
+		fmt.Sscanf(indexStr, "%d", &index)
+
+		deltaStr := r.URL.Query().Get("delta")
+		delta := 0
+		fmt.Sscanf(deltaStr, "%d", &delta)
+
+		cs, ok := store.GetCustomSkill(charID, index)
+		if !ok {
+			return shared.Empty()
+		}
+
+		switch field {
+		case "job":
+			cs.Job += delta
+			if cs.Job < 0 {
+				cs.Job = 0
+			}
+		case "hobby":
+			cs.Hobby += delta
+			if cs.Hobby < 0 {
+				cs.Hobby = 0
+			}
+		case "perm":
+			cs.Perm += delta
+		case "temp":
+			cs.Temp += delta
+		}
+
+		store.UpdateCustomSkill(charID, index, cs)
+
+		status := store.GetStatus(charID)
+		skills := store.GetSkills(charID)
+		remaining := cthulhu6.BuildRemainingPoints(status, skills)
+
+		updatedCs, _ := store.GetCustomSkill(charID, index)
+		templCs := shared.CustomSkill{
+			Name:  updatedCs.Name,
+			Job:   updatedCs.Job,
+			Hobby: updatedCs.Hobby,
+			Perm:  updatedCs.Perm,
+			Temp:  updatedCs.Temp,
+			Grow:  updatedCs.Grow,
+		}
+
+		return components.Cthulhu6CustomSkillUpdateFragments(index, templCs, field, remaining, basePath)
+	}))
+
 	// Extra points adjustment
 	r.Post("/api/status/{key}/adjust", html(func(r *http.Request) templ.Component {
 		key := chi.URLParam(r, "key")

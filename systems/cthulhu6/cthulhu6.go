@@ -206,10 +206,25 @@ type SkillCategoryData struct {
 	Order  int              `json:"order"`
 }
 
+// CustomSkill represents a user-defined skill (always single)
+type CustomSkill struct {
+	Name  string `json:"name"`
+	Job   int    `json:"job"`
+	Hobby int    `json:"hobby"`
+	Perm  int    `json:"perm"`
+	Temp  int    `json:"temp"`
+	Grow  bool   `json:"grow"`
+}
+
+// Total returns total allocated points
+func (c *CustomSkill) Total() int {
+	return c.Job + c.Hobby + c.Perm + c.Temp
+}
+
 // Skills represents all skills for a character
 type Skills struct {
 	Categories map[SkillCategory]SkillCategoryData `json:"categories"`
-	Custom     []Skill                             `json:"custom"`
+	Custom     []CustomSkill                       `json:"custom"`
 	Extra      SkillExtra                          `json:"extra"`
 }
 
@@ -318,7 +333,7 @@ func NewSkills() *Skills {
 				},
 			},
 		},
-		Custom: []Skill{},
+		Custom: []CustomSkill{},
 		Extra:  SkillExtra{Job: 0, Hobby: 0},
 	}
 }
@@ -398,11 +413,9 @@ func (s *Status) RemainingPoints(skills *Skills) (job int, hobby int) {
 			}
 		}
 	}
-	for _, skill := range skills.Custom {
-		if skill.IsSingle() {
-			usedJob += skill.Single.Job
-			usedHobby += skill.Single.Hobby
-		}
+	for _, cs := range skills.Custom {
+		usedJob += cs.Job
+		usedHobby += cs.Hobby
 	}
 
 	return totalJob - usedJob, totalHobby - usedHobby

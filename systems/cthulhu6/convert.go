@@ -8,7 +8,7 @@ import (
 
 // BuildSheetState creates a SheetState from CoC6 data and page context
 func BuildSheetState(pc shared.PageContext, status *Status, skills *Skills) shared.SheetState {
-	vars, computed, params, db, skillCategories, skillExtra, skillPoints := convertToTemplates(status, skills)
+	vars, computed, params, db, skillCategories, customSkills, skillExtra, skillPoints := convertToTemplates(status, skills)
 	return shared.SheetState{
 		PC: pc,
 		Status: shared.StatusState{
@@ -18,15 +18,16 @@ func BuildSheetState(pc shared.PageContext, status *Status, skills *Skills) shar
 			DamageBonus: db,
 		},
 		Skills: shared.SkillsState{
-			Categories: skillCategories,
-			Extra:      skillExtra,
-			Remaining:  skillPoints,
+			Categories:   skillCategories,
+			CustomSkills: customSkills,
+			Extra:        skillExtra,
+			Remaining:    skillPoints,
 		},
 	}
 }
 
 // convertToTemplates converts CoC6 types to template types
-func convertToTemplates(status *Status, skills *Skills) ([]shared.StatusVariable, []shared.ComputedValue, []shared.StatusParameter, string, []shared.SkillCategory, shared.SkillExtra, shared.SkillPoints) {
+func convertToTemplates(status *Status, skills *Skills) ([]shared.StatusVariable, []shared.ComputedValue, []shared.StatusParameter, string, []shared.SkillCategory, []shared.CustomSkill, shared.SkillExtra, shared.SkillPoints) {
 	// Variables in display order
 	varOrder := []string{"STR", "CON", "POW", "DEX", "APP", "SIZ", "INT", "EDU"}
 	variables := make([]shared.StatusVariable, 0, len(varOrder))
@@ -126,13 +127,26 @@ func convertToTemplates(status *Status, skills *Skills) ([]shared.StatusVariable
 		Hobby: skills.Extra.Hobby,
 	}
 
+	// Convert custom skills
+	customSkills := make([]shared.CustomSkill, len(skills.Custom))
+	for i, cs := range skills.Custom {
+		customSkills[i] = shared.CustomSkill{
+			Name:  cs.Name,
+			Job:   cs.Job,
+			Hobby: cs.Hobby,
+			Perm:  cs.Perm,
+			Temp:  cs.Temp,
+			Grow:  cs.Grow,
+		}
+	}
+
 	remJob, remHobby := status.RemainingPoints(skills)
 	skillPoints := shared.SkillPoints{
 		Job:   remJob,
 		Hobby: remHobby,
 	}
 
-	return variables, computed, parameters, status.DamageBonus(), skillCategories, skillExtra, skillPoints
+	return variables, computed, parameters, status.DamageBonus(), skillCategories, customSkills, skillExtra, skillPoints
 }
 
 // BuildSkill creates a template Skill from CoC6 skill data

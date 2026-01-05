@@ -106,7 +106,7 @@ var routeTests = []RouteTest{
 		Desc:         "Toggle skill grow flag",
 		TestURL:      "/cthulhu6/api/skill/回避/grow",
 		WantCode:     http.StatusOK,
-		WantContains: []string{"skills-panel", "/cthulhu6/api/skill/"},
+		WantContains: []string{"hx-swap-oob", "skill-grow-回避"},
 	},
 	{
 		Method:       "POST",
@@ -150,7 +150,7 @@ var routeTests = []RouteTest{
 			s.UpdateSkill("demo", "芸術", skill)
 		},
 		WantCode:     http.StatusOK,
-		WantContains: []string{"skills-panel"},
+		WantContains: []string{"hx-swap-oob", "genre-grow-芸術-0"},
 	},
 	{
 		Method:  "POST",
@@ -179,6 +179,61 @@ var routeTests = []RouteTest{
 		},
 		WantCode:     http.StatusOK,
 		WantContains: []string{"skills-panel"},
+	},
+	// Custom skill routes
+	{
+		Method:       "POST",
+		Route:        "/cthulhu6/api/skill/custom/add",
+		Desc:         "Add custom skill",
+		TestURL:      "/cthulhu6/api/skill/custom/add",
+		WantCode:     http.StatusOK,
+		WantContains: []string{"skills-panel", "custom-skills-section"},
+	},
+	{
+		Method:  "POST",
+		Route:   "/cthulhu6/api/skill/custom/{index}/delete",
+		Desc:    "Delete custom skill",
+		TestURL: "/cthulhu6/api/skill/custom/0/delete",
+		Setup: func(s *Store) {
+			s.AddCustomSkill("demo")
+		},
+		WantCode:     http.StatusOK,
+		WantContains: []string{"skills-panel"},
+	},
+	{
+		Method:  "POST",
+		Route:   "/cthulhu6/api/skill/custom/{index}/grow",
+		Desc:    "Toggle custom skill grow flag",
+		TestURL: "/cthulhu6/api/skill/custom/0/grow",
+		Setup: func(s *Store) {
+			s.AddCustomSkill("demo")
+		},
+		WantCode:     http.StatusOK,
+		WantContains: []string{"hx-swap-oob", "skill-grow-custom-0"},
+	},
+	{
+		Method:  "POST",
+		Route:   "/cthulhu6/api/skill/custom/{index}/name",
+		Desc:    "Set custom skill name",
+		TestURL: "/cthulhu6/api/skill/custom/0/name",
+		Form:    url.Values{"name": []string{"テスト技能"}},
+		Setup: func(s *Store) {
+			s.AddCustomSkill("demo")
+		},
+		WantCode:     http.StatusOK,
+		WantContains: nil, // Returns empty response
+	},
+	{
+		Method:  "POST",
+		Route:   "/cthulhu6/api/skill/custom/{index}/{field}/adjust",
+		Desc:    "Adjust custom skill field",
+		TestURL: "/cthulhu6/api/skill/custom/0/job/adjust",
+		Query:   "delta=5",
+		Setup: func(s *Store) {
+			s.AddCustomSkill("demo")
+		},
+		WantCode:     http.StatusOK,
+		WantContains: []string{"hx-swap-oob", "custom-0-job"},
 	},
 }
 

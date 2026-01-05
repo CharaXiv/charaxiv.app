@@ -203,6 +203,23 @@ templ Cthulhu6SkillsPanelContent(state SheetState) {
 				margin-bottom: var(--space-1);
 			}
 
+			/* Custom skills header */
+			.custom-skills-header {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+				padding: var(--space-2) 0;
+				border-bottom: 1px solid var(--slate-200);
+				margin-bottom: var(--space-1);
+			}
+
+			.custom-skills-header .skills-category-title {
+				padding: 0;
+				border-bottom: none;
+				margin-bottom: 0;
+			}
+
 			/* Skills list */
 			.skills-list {
 				display: flex;
@@ -565,12 +582,14 @@ templ Cthulhu6SkillsPanelContent(state SheetState) {
 				for _, category := range state.Skills.Categories {
 					@SkillCategoryBlock(state.PC, category, state.Skills.Remaining)
 				}
+				@CustomSkillsSection(state.PC, state.Skills.CustomSkills, state.Skills.Remaining)
 			</div>
 			<div class="skills-column skills-column--second">
 				@ExtraPointsForm(state.PC, state.Skills.Extra)
 				for _, category := range state.Skills.Categories {
 					@SkillCategoryBlock(state.PC, category, state.Skills.Remaining)
 				}
+				@CustomSkillsSection(state.PC, state.Skills.CustomSkills, state.Skills.Remaining)
 			</div>
 		</div>
 	</div>
@@ -1014,4 +1033,240 @@ func genreLabelOrKey(label, key string) string {
 		return label
 	}
 	return key
+}
+
+// CustomSkillsSection renders the custom skills section
+templ CustomSkillsSection(pc PageContext, customSkills []CustomSkill, remaining SkillPoints) {
+	<div class="skills-category" id="custom-skills-section">
+		<div class="custom-skills-header">
+			<h3 class="skills-category-title">独自技能</h3>
+			if !pc.IsReadOnly() {
+				<button
+					type="button"
+					class="skill-multi-add"
+					title="独自技能を追加"
+					hx-post={ pc.BasePath + "/api/skill/custom/add" }
+					hx-target="#skills-panel"
+					hx-swap="outerHTML"
+				>
+					@icons.IconPlus()
+				</button>
+			}
+		</div>
+		if len(customSkills) > 0 {
+			<div class="skills-list">
+				for i, skill := range customSkills {
+					@CustomSkillRow(pc, i, skill, remaining)
+				}
+			</div>
+		} else if !pc.IsReadOnly() {
+			<div class="skill-multi-empty">
+				<button
+					type="button"
+					class="skill-multi-empty-btn"
+					hx-post={ pc.BasePath + "/api/skill/custom/add" }
+					hx-target="#skills-panel"
+					hx-swap="outerHTML"
+				>
+					独自技能を追加
+				</button>
+			</div>
+		}
+	</div>
+}
+
+// CustomSkillRow renders a single custom skill row
+templ CustomSkillRow(pc PageContext, index int, skill CustomSkill, remaining SkillPoints) {
+	{{ expanded := skill.IsActive() }}
+	{{ skillID := fmt.Sprintf("custom-%d", index) }}
+	<details class="skill-row" id={ "skill-row-" + skillID } open?={ expanded }>
+		<summary class="skill-header">
+			@CustomSkillGrowButton(pc, index, skill.Grow, false)
+			if !pc.IsReadOnly() {
+				<input
+					type="text"
+					class="genre-label-input"
+					value={ skill.Name }
+					placeholder="独自技能"
+					onclick="event.stopPropagation()"
+					hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/custom/%d/name", index) }
+					hx-trigger="change"
+					hx-swap="none"
+					name="name"
+				/>
+			} else {
+				<span class="genre-label-readonly">
+					if skill.Name != "" {
+						{ skill.Name }
+					} else {
+						独自技能
+					}
+				</span>
+			}
+			@CustomSkillPointsBreakdown(index, skill, false)
+			@CustomSkillTotal(index, skill, false)
+			<div class="skill-expand-icon">
+				@icons.IconCaretDown()
+			</div>
+		</summary>
+		if !pc.IsReadOnly() {
+			@CustomSkillDetail(pc, index, skill, remaining)
+		}
+	</details>
+}
+
+// CustomSkillGrowButton renders the grow checkbox for a custom skill
+templ CustomSkillGrowButton(pc PageContext, index int, grow bool, oob bool) {
+	{{ skillID := fmt.Sprintf("custom-%d", index) }}
+	<button
+		type="button"
+		id={ "skill-grow-" + skillID }
+		class={ "skill-grow-btn", templ.KV("skill-grow-btn--checked", grow) }
+		title="成長チェック"
+		disabled?={ pc.IsReadOnly() }
+		hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/custom/%d/grow", index) }
+		hx-swap="none"
+		onclick="event.stopPropagation()"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
+		if grow {
+			@icons.IconSquareCheck()
+		} else {
+			@icons.IconSquare()
+		}
+	</button>
+}
+
+// CustomSkillPointsBreakdown shows job/hobby/perm+temp breakdown for a custom skill
+templ CustomSkillPointsBreakdown(index int, skill CustomSkill, oob bool) {
+	{{ skillID := fmt.Sprintf("custom-%d", index) }}
+	<div
+		class="skill-points-display"
+		id={ "skill-breakdown-" + skillID }
+		title="職業P / 興味P / 増加分+一時的"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
+		<span class={ templ.KV("skill-points-zero", skill.Job == 0) }>{ fmt.Sprintf("%02d", skill.Job) }</span>
+		<span>/</span>
+		<span class={ templ.KV("skill-points-zero", skill.Hobby == 0) }>{ fmt.Sprintf("%02d", skill.Hobby) }</span>
+		<span>/</span>
+		<span class={ templ.KV("skill-points-zero", skill.Perm+skill.Temp == 0) }>{ fmt.Sprintf("%02d", skill.Perm+skill.Temp) }</span>
+	</div>
+}
+
+// CustomSkillTotal shows the total skill value
+templ CustomSkillTotal(index int, skill CustomSkill, oob bool) {
+	{{ skillID := fmt.Sprintf("custom-%d", index) }}
+	<div
+		class="skill-total"
+		id={ "skill-total-" + skillID }
+		title="達成値合計"
+		if oob {
+			hx-swap-oob="true"
+		}
+	>
+		{ strconv.Itoa(skill.Total()) }
+	</div>
+}
+
+// CustomSkillDetail renders the expandable detail section for a custom skill
+templ CustomSkillDetail(pc PageContext, index int, skill CustomSkill, remaining SkillPoints) {
+	{{
+		total := skill.Total()
+		jobMax := min(99-(total-skill.Job), skill.Job+remaining.Job)
+		hobbyMax := min(99-(total-skill.Hobby), skill.Hobby+remaining.Hobby)
+		permMax := 99 - (total - skill.Perm)
+		tempMax := 99 - (total - skill.Temp)
+	}}
+	<div class="genre-detail">
+		<div class="genre-detail-grid">
+			<span class="skill-detail-label">職業P</span>
+			<div class="skill-detail-wrapper">
+				@NumberInput(customSkillInputConfig(index, "job", skill.Job, 0, jobMax, pc.IsReadOnly(), pc.BasePath))
+			</div>
+			<span class="skill-detail-label">興味P</span>
+			<div class="skill-detail-wrapper">
+				@NumberInput(customSkillInputConfig(index, "hobby", skill.Hobby, 0, hobbyMax, pc.IsReadOnly(), pc.BasePath))
+			</div>
+			<span class="skill-detail-label">増加分</span>
+			<div class="skill-detail-wrapper">
+				@NumberInput(customSkillInputConfig(index, "perm", skill.Perm, -(total - skill.Perm), permMax, pc.IsReadOnly(), pc.BasePath))
+			</div>
+			<span class="skill-detail-label">一時的</span>
+			<div class="skill-detail-wrapper">
+				@NumberInput(customSkillInputConfig(index, "temp", skill.Temp, -(total - skill.Temp), tempMax, pc.IsReadOnly(), pc.BasePath))
+			</div>
+		</div>
+		<button
+			type="button"
+			class="genre-delete-btn"
+			hx-post={ pc.BasePath + fmt.Sprintf("/api/skill/custom/%d/delete", index) }
+			hx-target="#skills-panel"
+			hx-swap="outerHTML"
+			hx-confirm={ fmt.Sprintf("「%s」技能を削除しますか？", customSkillName(skill.Name)) }
+		>
+			技能を削除する
+		</button>
+	</div>
+}
+
+// customSkillInputConfig creates a NumberInputConfig for custom skill fields
+func customSkillInputConfig(index int, field string, value, minVal, maxVal int, readonly bool, basePath string) NumberInputConfig {
+	id := fmt.Sprintf("custom-%d-%s", index, field)
+	return NumberInputConfig{
+		ID:       id,
+		Name:     id,
+		Value:    value,
+		Min:      Ptr(minVal),
+		Max:      Ptr(maxVal),
+		Readonly: readonly,
+		BasePath: basePath,
+		HxPost:   fmt.Sprintf("/api/skill/custom/%d/%s/adjust", index, field),
+	}
+}
+
+func customSkillName(name string) string {
+	if name != "" {
+		return name
+	}
+	return "無名"
+}
+
+// CustomSkillGrowUpdateFragments returns OOB swap for grow button
+templ Cthulhu6CustomSkillGrowUpdateFragments(pc PageContext, index int, grow bool) {
+	@CustomSkillGrowButton(pc, index, grow, true)
+}
+
+// CustomSkillUpdateFragments returns the input wrapper plus OOB swaps for related displays
+templ Cthulhu6CustomSkillUpdateFragments(index int, skill CustomSkill, field string, remaining SkillPoints, basePath string) {
+	{{
+		total := skill.Total()
+		var value, minVal, maxVal int
+		switch field {
+		case "job":
+			value = skill.Job
+			minVal = 0
+			maxVal = min(99-(total-skill.Job), skill.Job+remaining.Job)
+		case "hobby":
+			value = skill.Hobby
+			minVal = 0
+			maxVal = min(99-(total-skill.Hobby), skill.Hobby+remaining.Hobby)
+		case "perm":
+			value = skill.Perm
+			minVal = -(total - skill.Perm)
+			maxVal = 99 - (total - skill.Perm)
+		case "temp":
+			value = skill.Temp
+			minVal = -(total - skill.Temp)
+			maxVal = 99 - (total - skill.Temp)
+		}
+	}}
+	@NumberInput(customSkillInputConfig(index, field, value, minVal, maxVal, false, basePath))
+	@CustomSkillPointsBreakdown(index, skill, true)
+	@CustomSkillTotal(index, skill, true)
+	@Cthulhu6PointsDisplay(remaining, true)
 }

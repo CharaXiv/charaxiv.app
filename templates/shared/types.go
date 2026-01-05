@@ -155,11 +155,32 @@ func (c SkillCategory) AllSkills() []Skill {
 	return all
 }
 
+// CustomSkill represents a user-defined skill
+type CustomSkill struct {
+	Name  string // user-defined skill name
+	Job   int
+	Hobby int
+	Perm  int
+	Temp  int
+	Grow  bool
+}
+
+// Total returns total allocated points for this custom skill
+func (c CustomSkill) Total() int {
+	return c.Job + c.Hobby + c.Perm + c.Temp
+}
+
+// IsActive returns true if the skill has any points allocated or grow checked
+func (c CustomSkill) IsActive() bool {
+	return c.Total() > 0 || c.Grow
+}
+
 // SkillsState holds all skills-related data for rendering
 type SkillsState struct {
-	Categories []SkillCategory // categories in display order
-	Extra      SkillExtra
-	Remaining  SkillPoints
+	Categories   []SkillCategory // categories in display order
+	CustomSkills []CustomSkill   // user-defined custom skills
+	Extra        SkillExtra
+	Remaining    SkillPoints
 }
 
 // SheetState holds all data needed to render a character sheet
