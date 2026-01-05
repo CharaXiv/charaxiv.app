@@ -596,3 +596,38 @@ func TestStatusAdjustOOBFragments(t *testing.T) {
 		t.Error("INT change should include points display in OOB response")
 	}
 }
+
+// TestAllRoutesRegistered verifies all expected routes are registered
+func TestAllRoutesRegistered(t *testing.T) {
+	r, _ := setupTestRouter()
+
+	expectedRoutes := map[string]bool{
+		"GET /cthulhu6/":                                              false,
+		"POST /cthulhu6/api/preview/on":                               false,
+		"POST /cthulhu6/api/preview/off":                              false,
+		"POST /cthulhu6/api/status/{key}/set":                         false,
+		"POST /cthulhu6/api/status/{key}/adjust":                      false,
+		"POST /cthulhu6/api/memo/{id}/set":                            false,
+		"POST /cthulhu6/api/skill/{key}/grow":                         false,
+		"POST /cthulhu6/api/skill/{key}/{field}/adjust":               false,
+		"POST /cthulhu6/api/skill/{key}/genre/add":                    false,
+		"POST /cthulhu6/api/skill/{key}/genre/{index}/delete":         false,
+		"POST /cthulhu6/api/skill/{key}/genre/{index}/grow":           false,
+		"POST /cthulhu6/api/skill/{key}/genre/{index}/label":          false,
+		"POST /cthulhu6/api/skill/{key}/genre/{index}/{field}/adjust": false,
+	}
+
+	chi.Walk(r, func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+		key := method + " " + route
+		if _, ok := expectedRoutes[key]; ok {
+			expectedRoutes[key] = true
+		}
+		return nil
+	})
+
+	for route, found := range expectedRoutes {
+		if !found {
+			t.Errorf("Expected route not registered: %s", route)
+		}
+	}
+}
