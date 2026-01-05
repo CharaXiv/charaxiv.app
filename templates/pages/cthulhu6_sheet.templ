@@ -6,23 +6,23 @@ import (
 	. "charaxiv/templates/shared"
 )
 
-var sheetStyles = templ.NewOnceHandle()
+var cthulhu6SheetStyles = templ.NewOnceHandle()
 
-// CharacterSheet renders the character sheet with provided state
-templ CharacterSheet(state SheetState) {
-	@Layout("Character", CharacterHeaderActions(state.PC, false), CharacterContent(state))
+// Cthulhu6Sheet renders the CoC 6th Edition character sheet
+templ Cthulhu6Sheet(state SheetState) {
+	@Layout("Character", Cthulhu6HeaderActions(state.PC, false), Cthulhu6SheetContent(state))
 }
 
-// CharacterHeaderActions renders the header buttons for the character sheet.
+// Cthulhu6HeaderActions renders the header buttons for the CoC6 sheet.
 // Set oob=true for out-of-band swaps.
-templ CharacterHeaderActions(pc PageContext, oob bool) {
+templ Cthulhu6HeaderActions(pc PageContext, oob bool) {
 	@components.HeaderActions("header-actions", oob) {
-		@characterHeaderButtons(pc)
+		@cthulhu6HeaderButtons(pc)
 	}
 }
 
-templ characterHeaderButtons(pc PageContext) {
-	@PreviewToggle(pc)
+templ cthulhu6HeaderButtons(pc PageContext) {
+	@Cthulhu6PreviewToggle(pc)
 	@components.ButtonLink(components.ButtonGhostBlue, components.ButtonSizeIcon, templ.Attributes{"href": "/characters", "title": "Character page"}) {
 		@icons.IconAddressBook()
 	}
@@ -31,8 +31,8 @@ templ characterHeaderButtons(pc PageContext) {
 	}
 }
 
-// PreviewToggle renders the preview mode toggle button (only shown to owners)
-templ PreviewToggle(pc PageContext) {
+// Cthulhu6PreviewToggle renders the preview mode toggle button (only shown to owners)
+templ Cthulhu6PreviewToggle(pc PageContext) {
 	if pc.IsOwner {
 		if pc.Preview {
 			@components.Button(components.ButtonSolidBlue, components.ButtonSizeIcon, templ.Attributes{
@@ -58,16 +58,16 @@ templ PreviewToggle(pc PageContext) {
 	}
 }
 
-// PreviewModeFragments returns the fragments needed for preview mode toggle
-templ PreviewModeFragments(pc PageContext) {
+// Cthulhu6PreviewModeFragments returns the fragments needed for preview mode toggle
+templ Cthulhu6PreviewModeFragments(pc PageContext) {
 	@components.MemoGroup(pc, false)
 	@components.ScenarioMemoGroup(pc, true)
-	@CharacterHeaderActions(pc, true)
+	@Cthulhu6HeaderActions(pc, true)
 }
 
-// CharacterContent renders the main character sheet content
-templ CharacterContent(state SheetState) {
-	@sheetStyles.Once() {
+// Cthulhu6SheetContent renders the main CoC6 character sheet content
+templ Cthulhu6SheetContent(state SheetState) {
+	@cthulhu6SheetStyles.Once() {
 		<style>
 			.sheet {
 				display: grid;
@@ -153,9 +153,9 @@ templ CharacterContent(state SheetState) {
 			@components.ScenarioMemoGroup(state.PC, false)
 		</div>
 		<div class="sheet-right">
-			@components.StatusPanel(state, false)
-			@components.SkillsPanel(state, false)
+			@components.Cthulhu6StatusPanel(state, false)
+			@components.Cthulhu6SkillsPanel(state, false)
 		</div>
 	</div>
-	@components.PointsDisplay(state.Skills.Remaining, false)
+	@components.Cthulhu6PointsDisplay(state.Skills.Remaining, false)
 }

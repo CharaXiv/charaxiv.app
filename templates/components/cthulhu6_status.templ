@@ -8,36 +8,36 @@ import (
 
 // StatusPanelWithPoints renders the status panel plus an OOB update for skill points
 // Used when INT/EDU changes affect remaining skill points
-templ StatusPanelWithPoints(state SheetState) {
-	@StatusPanel(state, true)
-	@PointsDisplay(state.Skills.Remaining, true)
+templ Cthulhu6StatusPanelWithPoints(state SheetState) {
+	@Cthulhu6StatusPanel(state, true)
+	@Cthulhu6PointsDisplay(state.Skills.Remaining, true)
 }
 
 // StatusPanelWithSkills renders the status panel plus an OOB update for skills panel
 // Used when DEX/EDU changes affect skill initial values (回避, 母国語)
-templ StatusPanelWithSkills(state SheetState) {
-	@StatusPanel(state, true)
-	@SkillsPanel(state, true)
-	@PointsDisplay(state.Skills.Remaining, true)
+templ Cthulhu6StatusPanelWithSkills(state SheetState) {
+	@Cthulhu6StatusPanel(state, true)
+	@Cthulhu6SkillsPanel(state, true)
+	@Cthulhu6PointsDisplay(state.Skills.Remaining, true)
 }
 
 var statusStyles = templ.NewOnceHandle()
 
 // StatusPanel renders the ability scores panel.
 // Set oob=true for out-of-band swaps.
-templ StatusPanel(state SheetState, oob bool) {
+templ Cthulhu6StatusPanel(state SheetState, oob bool) {
 	<div
 		id="status-panel"
 		if oob {
 			hx-swap-oob="true"
 		}
 	>
-		@StatusPanelContent(state)
+		@Cthulhu6StatusPanelContent(state)
 	</div>
 }
 
 // StatusPanelContent renders the inner content of the status panel
-templ StatusPanelContent(state SheetState) {
+templ Cthulhu6StatusPanelContent(state SheetState) {
 	@statusStyles.Once() {
 		<style>
 			.status-panel {

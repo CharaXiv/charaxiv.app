@@ -12,26 +12,26 @@ var skillsStyles = templ.NewOnceHandle()
 
 // SkillsPanel renders the skills section.
 // Set oob=true for out-of-band swaps.
-templ SkillsPanel(state SheetState, oob bool) {
+templ Cthulhu6SkillsPanel(state SheetState, oob bool) {
 	<div
 		id="skills-panel"
 		if oob {
 			hx-swap-oob="true"
 		}
 	>
-		@SkillsPanelContent(state)
+		@Cthulhu6SkillsPanelContent(state)
 	</div>
 }
 
 // SkillsPanelWithPoints renders the skills panel plus an OOB update for the points display
 // Used when extra points change affects remaining skill points
-templ SkillsPanelWithPoints(state SheetState) {
-	@SkillsPanel(state, true)
-	@PointsDisplay(state.Skills.Remaining, true)
+templ Cthulhu6SkillsPanelWithPoints(state SheetState) {
+	@Cthulhu6SkillsPanel(state, true)
+	@Cthulhu6PointsDisplay(state.Skills.Remaining, true)
 }
 
 // SkillsPanelContent renders the inner content of the skills panel
-templ SkillsPanelContent(state SheetState) {
+templ Cthulhu6SkillsPanelContent(state SheetState) {
 	@skillsStyles.Once() {
 		<style>
 			.skills-panel {
@@ -577,7 +577,7 @@ templ SkillsPanelContent(state SheetState) {
 }
 
 // PointsDisplay shows remaining skill points
-templ PointsDisplay(remaining SkillPoints, oob bool) {
+templ Cthulhu6PointsDisplay(remaining SkillPoints, oob bool) {
 	<div
 		class="points-display"
 		id="points-display"
@@ -773,7 +773,7 @@ func skillInputConfig(skillKey, field string, value, minVal, maxVal int, readonl
 
 // SkillNumberInput renders a number input for skill values
 // SkillUpdateFragments returns the input wrapper plus OOB swaps for related displays
-templ SkillUpdateFragments(skill Skill, field string, remaining SkillPoints) {
+templ Cthulhu6SkillUpdateFragments(skill Skill, field string, remaining SkillPoints) {
 	{{
 		data := skill.Single
 		total := skill.Total()
@@ -801,7 +801,7 @@ templ SkillUpdateFragments(skill Skill, field string, remaining SkillPoints) {
 	@SkillName(skill, true)
 	@SkillPointsBreakdown(skill, true)
 	@SkillTotal(skill, true)
-	@PointsDisplay(remaining, true)
+	@Cthulhu6PointsDisplay(remaining, true)
 }
 
 func min(a, b int) int {

@@ -175,20 +175,20 @@ func main() {
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
-		return pages.CharacterSheet(state)
+		return pages.Cthulhu6Sheet(state)
 	}))
 
 	// Preview mode toggle - returns targeted fragments with OOB swaps
 	r.Post("/api/preview/on", HTML(func(r *http.Request) templ.Component {
 		ctx := buildPageContext(charStore)
 		ctx.Preview = true
-		return pages.PreviewModeFragments(ctx)
+		return pages.Cthulhu6PreviewModeFragments(ctx)
 	}))
 
 	r.Post("/api/preview/off", HTML(func(r *http.Request) templ.Component {
 		ctx := buildPageContext(charStore)
 		ctx.Preview = false
-		return pages.PreviewModeFragments(ctx)
+		return pages.Cthulhu6PreviewModeFragments(ctx)
 	}))
 
 	// Status variable set (direct value from input)
@@ -250,11 +250,11 @@ func main() {
 		// For INT/EDU changes, also update skill points display
 		switch key {
 		case "DEX", "EDU":
-			components.StatusPanelWithSkills(state).Render(r.Context(), w)
+			components.Cthulhu6StatusPanelWithSkills(state).Render(r.Context(), w)
 		case "INT":
-			components.StatusPanelWithPoints(state).Render(r.Context(), w)
+			components.Cthulhu6StatusPanelWithPoints(state).Render(r.Context(), w)
 		default:
-			components.StatusPanel(state, true).Render(r.Context(), w)
+			components.Cthulhu6StatusPanel(state, true).Render(r.Context(), w)
 		}
 	})
 
@@ -294,7 +294,7 @@ func main() {
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
-		return components.SkillsPanel(state, true)
+		return components.Cthulhu6SkillsPanel(state, true)
 	}))
 
 	// Skill field adjustment (job, hobby, perm, temp)
@@ -339,7 +339,7 @@ func main() {
 		templSkill := cthulhu6.BuildSkill(status, key, updatedSkill)
 		remaining := cthulhu6.BuildRemainingPoints(status, skills)
 
-		return components.SkillUpdateFragments(templSkill, field, remaining)
+		return components.Cthulhu6SkillUpdateFragments(templSkill, field, remaining)
 	}))
 
 	// Add genre to multi-skill
@@ -359,7 +359,7 @@ func main() {
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
-		return components.SkillsPanel(state, true)
+		return components.Cthulhu6SkillsPanel(state, true)
 	}))
 
 	// Delete genre from multi-skill
@@ -382,7 +382,7 @@ func main() {
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
-		return components.SkillsPanel(state, true)
+		return components.Cthulhu6SkillsPanel(state, true)
 	}))
 
 	// Toggle grow flag for genre
@@ -404,7 +404,7 @@ func main() {
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
-		return components.SkillsPanel(state, true)
+		return components.Cthulhu6SkillsPanel(state, true)
 	}))
 
 	// Update genre label
@@ -468,7 +468,7 @@ func main() {
 		status := charStore.GetStatus()
 		skills := charStore.GetSkills()
 		state := cthulhu6.BuildSheetState(pc, status, skills)
-		return components.SkillsPanel(state, true)
+		return components.Cthulhu6SkillsPanel(state, true)
 	}))
 
 	// Extra points adjustment
@@ -499,7 +499,7 @@ func main() {
 			status := charStore.GetStatus()
 			skills = charStore.GetSkills()
 			state := cthulhu6.BuildSheetState(pc, status, skills)
-			return components.SkillsPanelWithPoints(state)
+			return components.Cthulhu6SkillsPanelWithPoints(state)
 		}
 
 		// Handle parameters (HP, MP, SAN)
@@ -515,7 +515,7 @@ func main() {
 			status := charStore.GetStatus()
 			skills := charStore.GetSkills()
 			state := cthulhu6.BuildSheetState(pc, status, skills)
-			return components.StatusPanel(state, true)
+			return components.Cthulhu6StatusPanel(state, true)
 		}
 
 		// Original status variable handling
@@ -539,11 +539,11 @@ func main() {
 		// For INT/EDU changes, also update skill points display
 		switch key {
 		case "DEX", "EDU":
-			return components.StatusPanelWithSkills(state)
+			return components.Cthulhu6StatusPanelWithSkills(state)
 		case "INT":
-			return components.StatusPanelWithPoints(state)
+			return components.Cthulhu6StatusPanelWithPoints(state)
 		default:
-			return components.StatusPanel(state, true)
+			return components.Cthulhu6StatusPanel(state, true)
 		}
 	}))
 
