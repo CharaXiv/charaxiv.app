@@ -225,7 +225,7 @@ templ SkillsPanelContent(state SheetState) {
 				display: flex;
 				flex-direction: row;
 				align-items: center;
-				gap: var(--space-2);
+				gap: var(--space-1);
 				padding: var(--space-1);
 				border-radius: var(--radius-md);
 				cursor: pointer;
@@ -265,9 +265,13 @@ templ SkillsPanelContent(state SheetState) {
 			}
 
 			.skill-name {
-				flex-grow: 1;
+				flex: 1 1 0;
+				min-width: 0;
 				font-weight: var(--font-weight-semibold);
 				color: var(--slate-700);
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
 			}
 
 			.skill-name--inactive {
