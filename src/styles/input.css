@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens as CSS variables for consistency with original */
+:root {
+  --transition-fast: 150ms ease;
+}
+
+/* Hide number input spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* HTMX loading state */
+.htmx-request .icon-spinner {
+  display: block !important;
+}
+.htmx-request .icon-logo {
+  display: none !important;
+}
+
+/* Extra color utility classes */
+.text-red-600 { color: rgb(220 38 38); }
+.text-red-700 { color: rgb(185 28 28); }
+.hover\:bg-red-50:hover { background-color: rgb(254 242 242); }
+.hover\:text-red-700:hover { color: rgb(185 28 28); }
+
+.text-green-700 { color: rgb(21 128 61); }
+.hover\:bg-green-50:hover { background-color: rgb(240 253 244); }
+.hover\:text-green-700:hover { color: rgb(21 128 61); }
+
+.text-orange-600 { color: rgb(234 88 12); }
+.text-orange-700 { color: rgb(194 65 12); }
+.hover\:bg-orange-50:hover { background-color: rgb(255 247 237); }
+.hover\:text-orange-700:hover { color: rgb(194 65 12); }
+
+.bg-slate-300 { background-color: rgb(203 213 225); }
+.hover\:bg-slate-300:hover { background-color: rgb(203 213 225); }
+
+/* EasyMDE toolbar styling */
+.editor-toolbar {
+  border: none !important;
+  border-radius: 0.5rem 0.5rem 0 0 !important;
+  background: rgb(248 250 252) !important;
+  padding: 0.5rem !important;
+  opacity: 1 !important;
+}
+
+.editor-toolbar::before,
+.editor-toolbar::after {
+  display: none !important;
+}
+
+/* Separator creates visual gap between islands */
+.editor-toolbar i.separator {
+  border: none !important;
+  width: 0.5rem !important;
+  margin: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Base button styling */
+.editor-toolbar button {
+  border: none !important;
+  background: rgb(226 232 240) !important;
+  color: rgb(71 85 105) !important;
+  margin: 0 !important;
+  padding: 0.375rem 0.625rem !important;
+  border-radius: 0 !important;
+  min-width: 2rem !important;
+}
+
+.editor-toolbar button:hover {
+  background: rgb(203 213 225) !important;
+  color: rgb(30 41 59) !important;
+}
+
+.editor-toolbar button:active,
+.editor-toolbar button.active {
+  background: rgb(148 163 184) !important;
+}
+
+/* Island 1: heading, quote, unordered-list, ordered-list */
+.editor-toolbar button.heading {
+  border-radius: 0.375rem 0 0 0.375rem !important;
+}
+.editor-toolbar button.ordered-list {
+  border-radius: 0 0.375rem 0.375rem 0 !important;
+}
+
+/* Island 2: bold, italic, strikethrough */
+.editor-toolbar button.bold {
+  border-radius: 0.375rem 0 0 0.375rem !important;
+}
+.editor-toolbar button.strikethrough {
+  border-radius: 0 0.375rem 0.375rem 0 !important;
+}
+
+/* Island 3: link (standalone or last) */
+.editor-toolbar button.link {
+  border-radius: 0.375rem !important;
+}
+
+/* Island 4: password button (standalone) */
+.editor-toolbar button.password-button {
+  border-radius: 0.375rem !important;
+}
+
+/* Fix Font Awesome icons in EasyMDE toolbar */
+.editor-toolbar button i.fa::before {
+  font-family: FontAwesome !important;
+}

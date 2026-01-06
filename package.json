@@ -1,0 +1,26 @@
+{
+  "name": "charaxiv-hono",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently --kill-others \"npm run css\" \"wrangler dev --port 8000\"",
+    "dev:server": "wrangler dev --port 8000",
+    "build": "wrangler deploy --dry-run --outdir=dist",
+    "deploy": "wrangler deploy",
+    "css": "tailwindcss -i ./src/styles/input.css -o ./src/static-styles.txt --watch",
+    "css:build": "tailwindcss -i ./src/styles/input.css -o ./src/static-styles.txt --minify",
+    "migrate": "wrangler d1 migrations apply charaxiv --local",
+    "migrate:remote": "wrangler d1 migrations apply charaxiv --remote"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "marked": "^15.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "@types/node": "^20.0.0",
+    "concurrently": "^9.2.1",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.54.0"
+  }
+}

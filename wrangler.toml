@@ -1,0 +1,24 @@
+name = "charaxiv"
+main = "src/index.tsx"
+compatibility_date = "2024-12-01"
+
+# Local development settings
+[dev]
+port = 8000
+local_protocol = "http"
+
+# Environment variables
+# [vars]
+# ENVIRONMENT = "production"
+
+# D1 Database (SQLite write buffer)
+[[d1_databases]]
+binding = "DB"
+database_name = "charaxiv"
+database_id = "local"
+migrations_dir = "migrations"
+
+# R2 Bucket (character JSON + images)
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "charaxiv-data"
